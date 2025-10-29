@@ -1,6 +1,6 @@
 const routes = [
     {
-        path: '/',
+        path: '/dashboard/item',
         component: '',
         label: '',
         icon: '',
