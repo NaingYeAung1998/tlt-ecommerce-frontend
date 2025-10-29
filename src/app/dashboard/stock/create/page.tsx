@@ -34,12 +34,9 @@ function AddStock() {
 
     const handleSave = async () => {
         const data = { ...stock };
-        data.product = { product_id: '' };
-        data.supplier = { supplier_id: '' };
-        data.unit = { unit_id: '' };
-        data.product.product_id = product ? product.value : '';
-        data.supplier.supplier_id = supplier ? supplier.value : '';
-        data.unit.unit_id = unit ? unit.value : '';
+        data.product = { product_id: product ? product.value : '' };
+        data.supplier = { supplier_id: supplier ? supplier.value : '' };
+        data.unit = { unit_id: unit ? unit.value : '' };
 
         if (id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/" + id

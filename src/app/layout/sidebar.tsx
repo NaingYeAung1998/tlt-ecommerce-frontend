@@ -1,6 +1,6 @@
 "use client"
 
-import { AccountBox as AccountBoxIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon } from "@mui/icons-material";
+import { AccountBox as AccountBoxIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
 import { Box, Collapse, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Typography } from "@mui/material";
 import SidebarButton from "../components/sidebarButton";
 import { useState } from "react";
@@ -58,6 +58,9 @@ function Sidebar() {
                     </ListItem>
                     <ListItem>
                         <SidebarButton icon={<PeopleIcon />} label="Supplier" selected={currentRoute.includes('supplier')} handleClick={() => handleRoute('/dashboard/supplier')} />
+                    </ListItem>
+                    <ListItem>
+                        <SidebarButton icon={<WarehouseIcon />} label="Warehouse" selected={currentRoute.includes('warehouse')} handleClick={() => handleRoute('/dashboard/warehouse')} />
                     </ListItem>
                 </List>
             </nav>

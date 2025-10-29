@@ -3,6 +3,6 @@ export interface ISupplier {
     supplier_name: string;
     supplier_address: string;
     supplier_phone: number;
-    note: number;
+    note?: string;
     created_on: string;
 }

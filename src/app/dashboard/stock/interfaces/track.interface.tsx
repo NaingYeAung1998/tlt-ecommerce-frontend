@@ -1,6 +1,15 @@
+import { IStockList } from "./stock.interface";
+
+export interface ITrackList extends IStockList {
+    warehouse_name: string;
+    total_delivered: number;
+    total_stored: number;
+}
+
 export interface ITrack {
     track_id: string;
     stock: ITrackStock;
+    warehouse: ITrackWarehouse;
     quantity: string;
     checked_date: string;
     status: string;
@@ -10,6 +19,10 @@ export interface ITrack {
 
 export interface ITrackStock {
     stock_id: string
+}
+
+export interface ITrackWarehouse {
+    warehouse_id: string
 }
 
 export interface ITrackList extends ITrack {
@@ -23,5 +36,6 @@ export type StockTrackProps = {
 export type AddTrackProps = {
     stock_id: string,
     handleClose: () => void,
-    track_id?: string
+    track_id?: string,
+    handleRefresh: () => void
 }

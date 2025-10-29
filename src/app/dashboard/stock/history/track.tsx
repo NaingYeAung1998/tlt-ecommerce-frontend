@@ -18,9 +18,10 @@ import { MOMENT_FORMAT, TRACK_STATUS_LIST } from '@/app/constants';
 import { AddTrackProps, ITrack, ITrackList, StockTrackProps } from '../interfaces/track.interface';
 import Select from 'react-select'
 import { ISelect } from '@/app/interfaces';
+import { IWarehouse } from '../../warehouse/intefaces/warehouse.interfaces';
 
 interface Column {
-    id: 'quantity' | 'checked_date' | 'status' | 'note' | 'created_on';
+    id: 'quantity' | 'checked_date' | 'warehouse_name' | 'status' | 'note' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -29,6 +30,7 @@ interface Column {
 const columns: readonly Column[] = [
     { id: 'quantity', label: 'Quantity', minWidth: 170 },
     { id: 'checked_date', label: 'Checked Date', minWidth: 100 },
+    { id: 'warehouse_name', label: 'Warehouse', minWidth: 100 },
     {
         id: 'status',
         label: 'Status',
@@ -38,7 +40,7 @@ const columns: readonly Column[] = [
     {
         id: 'note',
         label: 'Note',
-        minWidth: 170,
+        minWidth: 100,
         align: 'left',
 
     },
@@ -61,6 +63,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
     const [totalLength, setTotalLength] = useState(0);
     const [addTrackModal, setAddTrackModal] = useState(false);
     const [selectedTrackId, setSelectedTrackId] = useState('');
+    const [trackInfo, setTrackInfo] = useState<ITrackList>({} as ITrackList);
     const showSuccess = searchParams.get('showSuccess');
     const track = searchParams.get('track');
     const action = searchParams.get('action');
@@ -85,7 +88,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
     }
 
     const getTracks = async () => {
-        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/track/getByStock?stock_id=${stock_id}}search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/track/getByStock?stock_id=${stock_id}&search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
@@ -96,8 +99,25 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
         }
     }
 
+    const getTrackInfo = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/track/getInfo/${stock_id}`;
+        let response = await fetch(url);
+        if (response.ok) {
+            let result = await response.json();
+            setTrackInfo(result);
+        } else {
+
+        }
+    }
+
+    const handleRefresh = () => {
+        getTracks();
+        getTrackInfo();
+    }
+
     useEffect(() => {
         getTracks();
+        getTrackInfo();
     }, [])
 
     useEffect(() => {
@@ -108,8 +128,16 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
         <div>
             <Alert severity='success' hidden={!showSuccess}>{`Track ${track} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
             <Box sx={{ padding: 2 }}>
-                <div className='flex justify-end pb-5'>
-                    <Button variant='contained' color='primary' onClick={() => setAddTrackModal(true)}>Add Track</Button>
+                <div className='sm:flex justify-between pb-5'>
+                    <div className='text-[16px]'> <Typography color='#777777'>Stock</Typography>  {trackInfo?.stock_code} </div>
+                    <div className='text-[16px]'><Typography color='#777777'>Product</Typography>  {trackInfo?.stock_product} </div>
+                    <div className='text-[16px]'><Typography color='#777777'>Quantity</Typography>  {trackInfo?.quantity} </div>
+                    <div className='text-[16px]'><Typography color='#777777'>Delivered</Typography>   {trackInfo?.total_delivered ? trackInfo.total_delivered : 0} </div>
+                    <div className='text-[16px]'><Typography color='#777777'>Stored</Typography>  {trackInfo?.total_stored ? trackInfo.total_stored : 0} </div>
+                    <div className='flex justify-end'>
+                        <Button variant='contained' color='primary' onClick={() => { setSelectedTrackId(''); setAddTrackModal(true) }}>Add Track</Button>
+                    </div>
+
                 </div>
                 <Grid container sx={{ paddingTop: '20px' }}>
                     <Grid size={6}>
@@ -162,13 +190,14 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
                                             const value = row[column.id];
                                             return (
                                                 <TableCell key={column.id} align={column.align}>
-                                                    {column.id == 'created_on' ? moment(value).format(MOMENT_FORMAT) : value}
+                                                    {column.id == 'created_on' ? moment(value).format(MOMENT_FORMAT) :
+                                                        column.id == 'status' ? TRACK_STATUS_LIST.find(x => x.value == value)?.label : value}
                                                 </TableCell>
                                             );
                                         })}
                                         <TableCell align='right'>
                                             <div>
-                                                <IconButton color='default' onClick={() => setAddTrackModal(true)}><Edit /></IconButton>
+                                                <IconButton color='default' onClick={() => { setSelectedTrackId(row.track_id); setAddTrackModal(true) }}><Edit /></IconButton>
                                                 <IconButton color='warning'><Delete /></IconButton>
                                             </div>
                                         </TableCell>
@@ -189,20 +218,23 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
             />
 
             <Modal open={addTrackModal} onClose={handleAddTrackModalClose} disableEscapeKeyDown={false}>
-                <AddTrack stock_id={stock_id} handleClose={handleAddTrackModalClose} track_id={selectedTrackId} />
+                <AddTrack stock_id={stock_id} handleClose={handleAddTrackModalClose} track_id={selectedTrackId} handleRefresh={handleRefresh} />
             </Modal>
         </div>
 
     );
 }
 
-const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
+const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRefresh }) => {
 
     const [track, setTrack] = useState<ITrack>({ stock: { stock_id } } as ITrack)
-    const [status, setStatus] = useState<ISelect | null>(null);
+    const [status, setStatus] = useState<ISelect | null | undefined>(null);
     const today = new Date()
     const [checkedDate, setCheckedDate] = useState(today.toISOString().split('T')[0]);
+    const [warehouseList, setWarehouseList] = useState<ISelect[]>([]);
+    const [warehouse, setWarehouse] = useState<ISelect | null>(null)
     const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleInputChange = (field: 'quantity' | 'checked_date' | 'note', value: string) => {
         setTrack({ ...track, [field]: value })
@@ -212,6 +244,8 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
         const data = { ...track };
         data.status = status ? status?.value : '';
         data.checked_date = checkedDate;
+        data.warehouse = { warehouse_id: warehouse ? warehouse?.value : '' }
+        data.stock = { stock_id: stock_id }
         if (track_id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/track/" + track_id
             let response = await fetch(url, {
@@ -222,7 +256,11 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
                 body: JSON.stringify(data)
             })
             if (response.ok) {
+                handleRefresh();
+                handleClose();
             } else {
+                let error = await response.json();
+                setErrorMessage(error?.message);
                 setShowError(true)
             }
         } else {
@@ -235,11 +273,28 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
                 body: JSON.stringify(data)
             })
             if (response.ok) {
+                handleRefresh();
+                handleClose();
             } else {
+                let error = await response.json();
+                setErrorMessage(error?.message);
                 setShowError(true)
             }
         }
+    }
 
+    const getWarehouseList = async () => {
+        const url = process.env.NEXT_PUBLIC_BACKEND_URL + "warehouse?perPage=-1"
+        let response = await fetch(url);
+        if (response.ok) {
+            let result = await response.json();
+            let options: ISelect[] = [];
+            result.forEach((warehouse: IWarehouse, index: number) => {
+                let option: ISelect = { value: warehouse.warehouse_id, label: warehouse.warehouse_name }
+                options.push(option);
+            })
+            setWarehouseList(options);
+        }
     }
 
     const getExistingTrack = async (id: string) => {
@@ -248,12 +303,16 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
         if (response.ok) {
             let result = await response.json();
             setTrack(result);
+            setStatus(TRACK_STATUS_LIST.find(x => x.value == result.status))
+            setCheckedDate(result.checked_date);
+            setWarehouse({ value: result.warehouse?.warehouse_id, label: result.warehouse?.warehouse_name })
         }
     }
 
     useEffect(() => {
-        if (track_id) {
+        getWarehouseList();
 
+        if (track_id) {
             getExistingTrack(track_id);
         }
     }, [])
@@ -261,7 +320,7 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
     return (
         <div className='flex items-center justify-center mt-[20vh]'>
             <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px', width: '50%' }}>
-                <Alert severity="error" hidden={!showError}>{`Failed to create Track.`}</Alert>
+                <Alert severity="error" hidden={!showError}><div className="flex items-center gap-2">{`Failed to create track: `} <Typography fontWeight={'bold'}>{errorMessage}</Typography></div></Alert>
                 <br />
 
                 <Typography variant="body1" fontWeight={'bold'}>Add Track</Typography>
@@ -297,7 +356,18 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id }) => {
                             </div>
                         </div>
                     </Grid>
-
+                    <Grid size={6}>
+                        <div className="pt-[20px]">
+                            <Select options={warehouseList} placeholder='Warehouse' styles={{
+                                control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
+                                menu: (styles) => ({ ...styles, width: '100%' }),
+                                menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
+                            }}
+                                value={warehouse}
+                                onChange={(option) => setWarehouse(option)}
+                            />
+                        </div>
+                    </Grid>
                 </Grid>
 
 
