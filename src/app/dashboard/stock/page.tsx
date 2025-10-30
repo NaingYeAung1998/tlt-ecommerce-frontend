@@ -18,7 +18,7 @@ import { MOMENT_FORMAT } from '@/app/constants';
 import { IStockList } from './interfaces/stock.interface';
 
 interface Column {
-    id: 'stock_code' | 'stock_product' | 'stock_supplier' | 'stock_unit' | 'quantity' | 'buying_price' | 'selling_price' | 'fix_price' | 'note' | 'created_on';
+    id: 'stock_code' | 'stock_product' | 'stock_supplier' | 'stock_unit' | 'quantity' | 'buying_price_formatted' | 'selling_price_formatted' | 'fix_price_formatted' | 'note' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -48,21 +48,21 @@ const columns: readonly Column[] = [
 
     },
     {
-        id: 'buying_price',
+        id: 'buying_price_formatted',
         label: 'Buying Price',
         minWidth: 170,
         align: 'left',
 
     },
     {
-        id: 'selling_price',
+        id: 'selling_price_formatted',
         label: 'Selling Price',
         minWidth: 170,
         align: 'left',
 
     },
     {
-        id: 'fix_price',
+        id: 'fix_price_formatted',
         label: 'Fixed Price',
         minWidth: 170,
         align: 'left',

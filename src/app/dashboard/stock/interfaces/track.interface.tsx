@@ -1,7 +1,6 @@
 import { IStockList } from "./stock.interface";
 
-export interface ITrackList extends IStockList {
-    warehouse_name: string;
+export interface ITrackInfo extends IStockList {
     total_delivered: number;
     total_stored: number;
 }
@@ -26,7 +25,7 @@ export interface ITrackWarehouse {
 }
 
 export interface ITrackList extends ITrack {
-
+    warehouse_name: string
 }
 
 export type StockTrackProps = {

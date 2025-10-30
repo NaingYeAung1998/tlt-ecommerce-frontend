@@ -7,6 +7,7 @@ import { SyntheticEvent, useState } from 'react';
 import { Paper } from '@mui/material';
 import Tracks from './track';
 import { useSearchParams } from 'next/navigation';
+import Payments from './payment';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -54,7 +55,7 @@ export default function StockHistory() {
                     <Tracks stock_id={id} />
                 </CustomTabPanel>
                 <CustomTabPanel value={tab} index={1}>
-                    Item Two
+                    <Payments stock_id={id} />
                 </CustomTabPanel>
             </Box>
         </Paper>

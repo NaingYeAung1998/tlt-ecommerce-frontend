@@ -8,6 +8,9 @@ export interface IStockList {
     buying_price: string;
     selling_price: string;
     fix_price: string;
+    buying_price_formatted: string;
+    selling_price_formatted: string;
+    fix_price_formatted: string;
     note: string;
     created_on: string;
 }
