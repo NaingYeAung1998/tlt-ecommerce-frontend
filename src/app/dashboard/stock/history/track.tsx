@@ -15,7 +15,7 @@ import { FC, KeyboardEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT, TRACK_STATUS_LIST } from '@/app/constants';
-import { AddTrackProps, ITrack, ITrackList, StockTrackProps } from '../interfaces/track.interface';
+import { AddTrackProps, ITrack, ITrackInfo, ITrackList, StockTrackProps } from '../interfaces/track.interface';
 import Select from 'react-select'
 import { ISelect } from '@/app/interfaces';
 import { IWarehouse } from '../../warehouse/intefaces/warehouse.interfaces';
@@ -63,7 +63,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
     const [totalLength, setTotalLength] = useState(0);
     const [addTrackModal, setAddTrackModal] = useState(false);
     const [selectedTrackId, setSelectedTrackId] = useState('');
-    const [trackInfo, setTrackInfo] = useState<ITrackList>({} as ITrackList);
+    const [trackInfo, setTrackInfo] = useState<ITrackInfo>({} as ITrackInfo);
     const showSuccess = searchParams.get('showSuccess');
     const track = searchParams.get('track');
     const action = searchParams.get('action');
