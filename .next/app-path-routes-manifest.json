@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/auth/login/page": "/auth/login",
+  "/page": "/",
+  "/dashboard/category/page": "/dashboard/category",
+  "/dashboard/page": "/dashboard",
+  "/dashboard/stock/create/page": "/dashboard/stock/create",
+  "/dashboard/product/page": "/dashboard/product",
+  "/dashboard/grade/create/page": "/dashboard/grade/create",
+  "/dashboard/category/create/page": "/dashboard/category/create",
+  "/dashboard/stock/history/page": "/dashboard/stock/history",
+  "/dashboard/grade/page": "/dashboard/grade",
+  "/dashboard/unit/create/page": "/dashboard/unit/create",
+  "/dashboard/product/create/page": "/dashboard/product/create",
+  "/dashboard/stock/page": "/dashboard/stock",
+  "/dashboard/supplier/create/page": "/dashboard/supplier/create",
+  "/dashboard/unit/page": "/dashboard/unit",
+  "/dashboard/supplier/page": "/dashboard/supplier",
+  "/dashboard/warehouse/page": "/dashboard/warehouse",
+  "/dashboard/warehouse/create/page": "/dashboard/warehouse/create"
+}

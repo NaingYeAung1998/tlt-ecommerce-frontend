@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/page": "app/page.js",
+  "/dashboard/category/page": "app/dashboard/category/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/stock/create/page": "app/dashboard/stock/create/page.js",
+  "/dashboard/product/page": "app/dashboard/product/page.js",
+  "/dashboard/grade/create/page": "app/dashboard/grade/create/page.js",
+  "/dashboard/category/create/page": "app/dashboard/category/create/page.js",
+  "/dashboard/stock/history/page": "app/dashboard/stock/history/page.js",
+  "/dashboard/grade/page": "app/dashboard/grade/page.js",
+  "/dashboard/unit/create/page": "app/dashboard/unit/create/page.js",
+  "/dashboard/product/create/page": "app/dashboard/product/create/page.js",
+  "/dashboard/stock/page": "app/dashboard/stock/page.js",
+  "/dashboard/supplier/create/page": "app/dashboard/supplier/create/page.js",
+  "/dashboard/unit/page": "app/dashboard/unit/page.js",
+  "/dashboard/supplier/page": "app/dashboard/supplier/page.js",
+  "/dashboard/warehouse/page": "app/dashboard/warehouse/page.js",
+  "/dashboard/warehouse/create/page": "app/dashboard/warehouse/create/page.js"
+}
