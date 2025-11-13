@@ -16,6 +16,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { ICategory } from './interfaces/category.interface';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 
 interface Column {
     id: 'category_name' | 'category_description' | 'created_on';
@@ -44,6 +45,8 @@ export default function Categories() {
     const [perPage, setPerPage] = useState(10);
     const [rows, setRows] = useState<ICategory[]>([]);
     const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteSelected, setDeleteSeleceted] = useState<ICategory | null>(null);
     const showSuccess = searchParams.get('showSuccess');
     const category = searchParams.get('category');
     const action = searchParams.get('action');
@@ -61,6 +64,29 @@ export default function Categories() {
         if (e.key === 'Enter') {
             await getCategories()
         }
+    }
+
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.category_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
+        }
+    }
+
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}category/${deleteSelected?.category_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getCategories();
     }
 
     const getCategories = async () => {
@@ -152,7 +178,7 @@ export default function Categories() {
                                             <TableCell align='right'>
                                                 <div>
                                                     <Link href={'/dashboard/category/create?id=' + row.category_id}><IconButton color='default'><Edit /></IconButton></Link>
-                                                    <IconButton color='warning'><Delete /></IconButton>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.category_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -171,6 +197,7 @@ export default function Categories() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.category_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );

@@ -3,10 +3,14 @@
 import { AccountBox as AccountBoxIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
 import { Box, Collapse, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Typography } from "@mui/material";
 import SidebarButton from "../components/sidebarButton";
-import { useState } from "react";
+import { FC, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-function Sidebar() {
+interface SiderbarProps {
+    handleSidebarClose: () => void
+}
+
+const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
     const pathname = usePathname();
     const [inventoryCollapse, setInventoryCollapse] = useState(true);
     const [currentRoute, setCurrentRoute] = useState(pathname);
@@ -14,10 +18,11 @@ function Sidebar() {
 
     const handleRoute = (route: string) => {
         setCurrentRoute(route);
-        router.push(route)
+        router.push(route);
+        handleSidebarClose();
     }
     return (
-        <Box sx={{ width: '100%', maxWidth: 360, padding: 1, display: { xs: 'none', lg: 'block' } }}>
+        <Box sx={{ width: '100%', maxWidth: 360, padding: 1, backgroundColor: 'white', height: '100%' }}>
             <nav aria-label="main mailbox folders">
                 <List
                     subheader={
@@ -54,7 +59,7 @@ function Sidebar() {
                         <SidebarButton icon={<ReceiptIcon />} label="Orders" selected={false} />
                     </ListItem>
                     <ListItem>
-                        <SidebarButton icon={<AccountBoxIcon />} label="Customer" selected={false} />
+                        <SidebarButton icon={<AccountBoxIcon />} label="Customer" selected={currentRoute.includes('customer')} handleClick={() => handleRoute('/dashboard/customer')} />
                     </ListItem>
                     <ListItem>
                         <SidebarButton icon={<PeopleIcon />} label="Supplier" selected={currentRoute.includes('supplier')} handleClick={() => handleRoute('/dashboard/supplier')} />

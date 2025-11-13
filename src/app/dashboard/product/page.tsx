@@ -16,6 +16,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IProductList } from './interfaces/product.interface';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 
 interface Column {
     id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'product_description' | 'created_on';
@@ -64,6 +65,8 @@ export default function Products() {
     const [perPage, setPerPage] = useState(10);
     const [rows, setRows] = useState<IProductList[]>([]);
     const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteSelected, setDeleteSeleceted] = useState<IProductList | null>(null);
     const showSuccess = searchParams.get('showSuccess');
     const product = searchParams.get('product');
     const action = searchParams.get('action');
@@ -81,6 +84,29 @@ export default function Products() {
         if (e.key === 'Enter') {
             await getProducts()
         }
+    }
+
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.product_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
+        }
+    }
+
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}product/${deleteSelected?.product_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getProducts();
     }
 
     const getProducts = async () => {
@@ -173,7 +199,7 @@ export default function Products() {
                                                 <div>
                                                     <Link href={'/dashboard/stock?product_id=' + row.product_id + '&product_info=' + row.product_name + ' - ' + row.product_code}><IconButton color='primary'><ListAlt /></IconButton></Link>
                                                     <Link href={'/dashboard/product/create?id=' + row.product_id}><IconButton color='default'><Edit /></IconButton></Link>
-                                                    <IconButton color='warning'><Delete /></IconButton>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.product_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -192,6 +218,7 @@ export default function Products() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.product_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );

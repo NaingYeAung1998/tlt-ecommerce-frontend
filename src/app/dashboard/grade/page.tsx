@@ -16,6 +16,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IGrade } from './interfaces/grade.interface';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 
 interface Column {
     id: 'grade_name' | 'grade_description' | 'created_on';
@@ -44,6 +45,8 @@ export default function Grades() {
     const [perPage, setPerPage] = useState(10);
     const [rows, setRows] = useState<IGrade[]>([]);
     const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [deleteSelected, setDeleteSeleceted] = useState<IGrade | null>(null)
     const showSuccess = searchParams.get('showSuccess');
     const grade = searchParams.get('grade');
     const action = searchParams.get('action');
@@ -61,6 +64,29 @@ export default function Grades() {
         if (e.key === 'Enter') {
             await getGrades()
         }
+    }
+
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.grade_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
+        }
+    }
+
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}grade/${deleteSelected?.grade_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getGrades();
     }
 
     const getGrades = async () => {
@@ -152,7 +178,7 @@ export default function Grades() {
                                             <TableCell align='right'>
                                                 <div>
                                                     <Link href={'/dashboard/grade/create?id=' + row.grade_id}><IconButton color='default'><Edit /></IconButton></Link>
-                                                    <IconButton color='warning'><Delete /></IconButton>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.grade_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -171,6 +197,7 @@ export default function Grades() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.grade_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );

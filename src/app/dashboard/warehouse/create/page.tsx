@@ -13,12 +13,15 @@ function AddWarehouse() {
     const router = useRouter();
     const [warehouse, setWarehouse] = useState<IWarehouse>({} as IWarehouse)
     const [showError, setShowError] = useState(false);
+    const [saveLoading, setSaveLoading] = useState(false);
 
     const handleInputChange = (field: 'warehouse_name' | 'warehouse_address' | 'warehouse_phone' | 'note', value: string) => {
         setWarehouse({ ...warehouse, [field]: value })
     }
 
     const handleSave = async () => {
+        setSaveLoading(true);
+
         const data = { ...warehouse };
         if (id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "warehouse/" + id
@@ -49,6 +52,7 @@ function AddWarehouse() {
                 setShowError(true)
             }
         }
+        setSaveLoading(false);
 
     }
 
@@ -93,7 +97,7 @@ function AddWarehouse() {
 
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/warehouse'}><Button variant="outlined" color="warning">Cancel</Button></Link>
-                <Button variant="contained" color="primary" onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
+                <Button variant="contained" color="primary" onClick={() => handleSave()} disabled={saveLoading}>{id ? 'Update' : 'Create'}</Button>
             </div>
 
         </Box>

@@ -16,6 +16,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IUnit } from './interfaces/unit.interface';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 
 interface Column {
     id: 'unit_name' | 'unit_symbol' | 'created_on';
@@ -44,6 +45,8 @@ export default function Units() {
     const [perPage, setPerPage] = useState(10);
     const [rows, setRows] = useState<IUnit[]>([]);
     const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteSelected, setDeleteSeleceted] = useState<IUnit | null>(null);
     const showSuccess = searchParams.get('showSuccess');
     const unit = searchParams.get('unit');
     const action = searchParams.get('action');
@@ -61,6 +64,29 @@ export default function Units() {
         if (e.key === 'Enter') {
             await getUnits()
         }
+    }
+
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.unit_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
+        }
+    }
+
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}unit/${deleteSelected?.unit_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getUnits();
     }
 
     const getUnits = async () => {
@@ -152,7 +178,7 @@ export default function Units() {
                                             <TableCell align='right'>
                                                 <div className=''>
                                                     <Link href={'/dashboard/unit/create?id=' + row.unit_id}><IconButton color='default'><Edit /></IconButton></Link>
-                                                    <IconButton color='warning'><Delete /></IconButton>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.unit_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -171,6 +197,7 @@ export default function Units() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.unit_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );

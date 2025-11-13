@@ -16,6 +16,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { ISupplier } from './interfaces/supplier.interface';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 
 interface Column {
     id: 'supplier_name' | 'supplier_address' | 'supplier_phone' | 'note' | 'created_on';
@@ -57,6 +58,8 @@ export default function Suppliers() {
     const [perPage, setPerPage] = useState(10);
     const [rows, setRows] = useState<ISupplier[]>([]);
     const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteSelected, setDeleteSeleceted] = useState<ISupplier | null>(null);
     const showSuccess = searchParams.get('showSuccess');
     const supplier = searchParams.get('supplier');
     const action = searchParams.get('action');
@@ -74,6 +77,29 @@ export default function Suppliers() {
         if (e.key === 'Enter') {
             await getSuppliers()
         }
+    }
+
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.supplier_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
+        }
+    }
+
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}supplier/${deleteSelected?.supplier_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getSuppliers();
     }
 
     const getSuppliers = async () => {
@@ -165,7 +191,7 @@ export default function Suppliers() {
                                             <TableCell align='right'>
                                                 <div>
                                                     <Link href={'/dashboard/supplier/create?id=' + row.supplier_id}><IconButton color='default'><Edit /></IconButton></Link>
-                                                    <IconButton color='warning'><Delete /></IconButton>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.supplier_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -184,6 +210,7 @@ export default function Suppliers() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.supplier_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );
