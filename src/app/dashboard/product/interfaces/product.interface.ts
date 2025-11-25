@@ -22,5 +22,5 @@ export interface IProductCategory {
 }
 
 export interface IProductGrade {
-    grade_id: string;
+    grade_id?: string | null;
 }

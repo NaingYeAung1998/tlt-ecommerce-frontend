@@ -30,9 +30,9 @@ function AddProduct() {
     const handleSave = async () => {
         const data = { ...product };
         data.category = { category_id: '' };
-        data.grade = { grade_id: '' };
+        data.grade = { grade_id: null };
         data.category.category_id = category ? category.value : '';
-        data.grade.grade_id = grade ? grade.value : '';
+        data.grade.grade_id = grade ? grade.value : null;
         console.log(data);
         if (id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product/" + id
