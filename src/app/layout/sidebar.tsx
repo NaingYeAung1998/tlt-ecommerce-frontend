@@ -1,6 +1,6 @@
 "use client"
 
-import { AccountBox as AccountBoxIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
+import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
 import { Box, Collapse, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Typography } from "@mui/material";
 import SidebarButton from "../components/sidebarButton";
 import { FC, useState } from "react";
@@ -13,6 +13,7 @@ interface SiderbarProps {
 const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
     const pathname = usePathname();
     const [inventoryCollapse, setInventoryCollapse] = useState(true);
+    const [supplierCollapse, setSupplierCollapse] = useState(true);
     const [currentRoute, setCurrentRoute] = useState(pathname);
     const router = useRouter();
 
@@ -29,7 +30,7 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
                         <ListSubheader component="div" id="nested-list-subheader">
                             <div className="flex justify-center pb-10">
                                 {/* <img src={"/logo.jpg"} width={'80px'} height={'100px'} /> */}
-                                <Typography variant="h5" color="primary" textAlign={'center'} fontWeight={'bold'}>TLT Warehouse</Typography>
+                                <Typography variant="h5" color="primary" textAlign={'center'} fontWeight={'bold'}>TLH Warehouse</Typography>
                             </div>
                             {/* <Divider /> */}
                         </ListSubheader>
@@ -61,9 +62,18 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
                     <ListItem>
                         <SidebarButton icon={<AccountBoxIcon />} label="Customer" selected={currentRoute.includes('customer')} handleClick={() => handleRoute('/dashboard/customer')} />
                     </ListItem>
-                    <ListItem>
-                        <SidebarButton icon={<PeopleIcon />} label="Supplier" selected={currentRoute.includes('supplier')} handleClick={() => handleRoute('/dashboard/supplier')} />
+                    <ListItem >
+                        <SidebarButton handleClick={() => setSupplierCollapse(!supplierCollapse)} icon={<PeopleIcon />} label="Supplier" selected={false} isNested={true} isCollapse={supplierCollapse} />
                     </ListItem>
+                    <Collapse in={!supplierCollapse} timeout="auto" unmountOnExit>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<PeopleIcon />} label="Supplier" selected={currentRoute.includes('supplier') && !currentRoute.includes('voucher')} handleClick={() => handleRoute('/dashboard/supplier')} />
+                        </List>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<AssignmentIcon />} label="Voucher" selected={currentRoute.includes('supplier_voucher')} handleClick={() => handleRoute('/dashboard/supplier_voucher')} />
+                        </List>
+                    </Collapse>
+
                     <ListItem>
                         <SidebarButton icon={<WarehouseIcon />} label="Warehouse" selected={currentRoute.includes('warehouse')} handleClick={() => handleRoute('/dashboard/warehouse')} />
                     </ListItem>

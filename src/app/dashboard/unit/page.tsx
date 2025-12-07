@@ -19,7 +19,7 @@ import { IUnit } from './interfaces/unit.interface';
 import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 
 interface Column {
-    id: 'unit_name' | 'unit_symbol' | 'created_on';
+    id: 'unit_name' | 'unit_symbol' | 'parent_unit_name' | 'quantity_per_parent_unit' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -28,6 +28,8 @@ interface Column {
 const columns: readonly Column[] = [
     { id: 'unit_name', label: 'Name', minWidth: 170 },
     { id: 'unit_symbol', label: 'Symbol', minWidth: 100 },
+    { id: 'parent_unit_name', label: 'Parent Unit', minWidth: 100 },
+    { id: 'quantity_per_parent_unit', label: 'Qty Per Parent', minWidth: 100 },
     {
         id: 'created_on',
         label: 'Created Date',
@@ -94,6 +96,9 @@ export default function Units() {
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
+            result.data.forEach((unit: any) => {
+                unit.parent_unit_name = unit.parent_unit?.unit_name
+            })
             setRows(result.data);
             setTotalLength(result.totalLength)
         } else {

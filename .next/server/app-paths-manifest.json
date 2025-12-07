@@ -1,6 +1,8 @@
 {
-  "/page": "app/page.js",
-  "/dashboard/product/page": "app/dashboard/product/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
   "/dashboard/stock/page": "app/dashboard/stock/page.js",
-  "/dashboard/product/create/page": "app/dashboard/product/create/page.js"
+  "/dashboard/product/page": "app/dashboard/product/page.js",
+  "/dashboard/supplier_voucher/page": "app/dashboard/supplier_voucher/page.js",
+  "/dashboard/stock/history/page": "app/dashboard/stock/history/page.js",
+  "/dashboard/stock/create/page": "app/dashboard/stock/create/page.js"
 }

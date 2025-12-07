@@ -21,6 +21,36 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/layout.js"
     ],
+    "/dashboard/supplier_voucher/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/supplier_voucher/page.js"
+    ],
+    "/dashboard/supplier_voucher/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/supplier_voucher/create/page.js"
+    ],
+    "/dashboard/supplier/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/supplier/page.js"
+    ],
+    "/dashboard/warehouse/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/warehouse/page.js"
+    ],
+    "/dashboard/unit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/unit/page.js"
+    ],
+    "/dashboard/unit/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/unit/create/page.js"
+    ],
     "/dashboard/product/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -35,6 +65,36 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/stock/page.js"
+    ],
+    "/dashboard/stock/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/stock/create/page.js"
+    ],
+    "/dashboard/grade/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/grade/page.js"
+    ],
+    "/dashboard/category/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/category/page.js"
+    ],
+    "/dashboard/category/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/category/create/page.js"
+    ],
+    "/dashboard/warehouse/create/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/warehouse/create/page.js"
+    ],
+    "/dashboard/stock/history/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/dashboard/stock/history/page.js"
     ]
   }
 }

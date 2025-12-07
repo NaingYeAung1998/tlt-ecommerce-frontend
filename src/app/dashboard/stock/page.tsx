@@ -9,13 +9,14 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { Alert, Box, Button, Grid, IconButton, Input, InputAdornment, Typography } from '@mui/material';
-import { Delete, Edit, Inventory, ListAlt, Search as SearchIcon, Update as UpdateIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, Inventory, ListAlt, Search as SearchIcon, Update as UpdateIcon } from '@mui/icons-material';
 import { useSearchParams } from 'next/navigation';
 import { KeyboardEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IStockList } from './interfaces/stock.interface';
+import { calculateQuantityWithHierarchy, getUnitHierarchyByProduct } from '@/app/utils';
 
 interface Column {
     id: 'stock_code' | 'stock_product' | 'stock_supplier' | 'stock_unit' | 'quantity' | 'buying_price_formatted' | 'selling_price_formatted' | 'fix_price_formatted' | 'note' | 'created_on';
@@ -32,13 +33,6 @@ const columns: readonly Column[] = [
         label: 'Supplier',
         minWidth: 170,
         align: 'left',
-    },
-    {
-        id: 'stock_unit',
-        label: 'Unit',
-        minWidth: 100,
-        align: 'left',
-
     },
     {
         id: 'quantity',
@@ -108,10 +102,20 @@ export default function Stocks() {
 
     const getStocks = async () => {
         if (product_id) {
+            const unitHierarchy = await getUnitHierarchyByProduct(product_id);
             const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/getByProduct?product_id=${product_id}&search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
             let response = await fetch(url);
             if (response.ok) {
                 let result = await response.json();
+                if (result.data) {
+                    if (unitHierarchy) {
+                        result.data.map((stock: IStockList) => {
+                            let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: stock.stock_unit_id, unit_name: stock.stock_unit, quantity: stock.quantity }])
+                            stock.quantity = formattedQuantity.quantityString;
+                        })
+                    }
+
+                }
                 setRows(result.data);
                 setTotalLength(result.totalLength)
             } else {
@@ -143,7 +147,7 @@ export default function Stocks() {
         <div>
 
             <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                <Alert severity='success' hidden={!showSuccess}>{`Stock ${stock} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
+                <Alert severity='success' hidden={!showSuccess}>{`Stock for ${stock} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
                 <Box sx={{ padding: 2 }}>
                     <div className='flex justify-end pb-5'>
                         <Link href={'/dashboard/stock/create?product_id=' + product_id}>
@@ -207,8 +211,9 @@ export default function Stocks() {
                                             })}
                                             <TableCell align='right'>
                                                 <div>
+                                                    <Link href={'/dashboard/stock/create?id=' + row.stock_id + '&product_id=' + product_id}><IconButton color='default'><EditIcon /></IconButton></Link>
                                                     <Link href={'/dashboard/stock/history?id=' + row.stock_id}><IconButton color='default'><UpdateIcon /></IconButton></Link>
-                                                    <IconButton color='warning'><Delete /></IconButton>
+                                                    <IconButton color='warning'><DeleteIcon /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

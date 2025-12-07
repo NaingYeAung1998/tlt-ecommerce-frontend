@@ -9,48 +9,34 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { Alert, Box, Button, Grid, IconButton, Input, InputAdornment, Typography } from '@mui/material';
-import { Delete, Edit, Inventory, ListAlt, Search as SearchIcon } from '@mui/icons-material';
+import { Delete, Edit, Search as SearchIcon } from '@mui/icons-material';
 import { useSearchParams } from 'next/navigation';
 import { KeyboardEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
-import { IProductList } from './interfaces/product.interface';
 import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
+import { ISupplierVoucherList } from './interfaces/supplier_voucher.interface';
 
 interface Column {
-    id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'product_quantity_per_bag' | 'product_description' | 'created_on';
+    id: 'voucher_code' | 'supplier' | 'total_amount' | 'total_paid' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
 }
 
 const columns: readonly Column[] = [
-    { id: 'product_name', label: 'Name', minWidth: 170 },
-    { id: 'product_code', label: 'Code', minWidth: 100 },
+    { id: 'voucher_code', label: 'Voucher Code', minWidth: 170 },
+    { id: 'supplier', label: 'Supplier', minWidth: 100 },
     {
-        id: 'product_category',
-        label: 'Category',
+        id: 'total_amount',
+        label: 'Total Amount',
         minWidth: 170,
         align: 'left',
     },
     {
-        id: 'product_grade',
-        label: 'Grade',
-        minWidth: 170,
-        align: 'left',
-
-    },
-    {
-        id: 'product_quantity_per_bag',
-        label: 'Qty Per Bag',
-        minWidth: 170,
-        align: 'left',
-
-    },
-    {
-        id: 'product_description',
-        label: 'Description',
+        id: 'total_paid',
+        label: 'Total Paid',
         minWidth: 170,
         align: 'left',
 
@@ -64,18 +50,18 @@ const columns: readonly Column[] = [
 ];
 
 
-export default function Products() {
+export default function SupplierVouchers() {
     const searchParams = useSearchParams();
 
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(0)
     const [perPage, setPerPage] = useState(10);
-    const [rows, setRows] = useState<IProductList[]>([]);
+    const [rows, setRows] = useState<ISupplierVoucherList[]>([]);
     const [totalLength, setTotalLength] = useState(0);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [deleteSelected, setDeleteSeleceted] = useState<IProductList | null>(null);
+    const [deleteSelected, setDeleteSeleceted] = useState<ISupplierVoucherList | null>(null);
     const showSuccess = searchParams.get('showSuccess');
-    const product = searchParams.get('product');
+    const supplier = searchParams.get('supplier');
     const action = searchParams.get('action');
 
     const handleChangePage = (event: unknown, newPage: number) => {
@@ -89,12 +75,12 @@ export default function Products() {
 
     const handleSearch = async (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
-            await getProducts()
+            await getSupplierVouchers()
         }
     }
 
     const handleDeleteSelect = (id: string) => {
-        let selected = rows.find(x => x.product_id == id);
+        let selected = rows.find(x => x.voucher_id == id);
         if (selected) {
             setDeleteSeleceted(selected);
             setShowDeleteDialog(true);
@@ -102,7 +88,7 @@ export default function Products() {
     }
 
     const handleDelete = async () => {
-        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}product/${deleteSelected?.product_id}`
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}supplier_voucher/${deleteSelected?.voucher_id}`
         let response = await fetch(url, {
             method: "DELETE"
         });
@@ -113,11 +99,11 @@ export default function Products() {
 
     const handleDeleteClose = () => {
         setShowDeleteDialog(false);
-        getProducts();
+        getSupplierVouchers();
     }
 
-    const getProducts = async () => {
-        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}product?search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
+    const getSupplierVouchers = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}supplier_voucher?search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
@@ -129,27 +115,27 @@ export default function Products() {
     }
 
     useEffect(() => {
-        getProducts();
+        getSupplierVouchers();
     }, [])
 
     useEffect(() => {
-        getProducts()
+        getSupplierVouchers()
     }, [currentPage, perPage])
 
     return (
         <div>
 
             <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                <Alert severity='success' hidden={!showSuccess}>{`Product ${product} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
+                <Alert severity='success' hidden={!showSuccess}>{`Voucher for Supplier ${supplier} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
                 <Box sx={{ padding: 2 }}>
                     <div className='flex justify-end pb-5'>
-                        <Link href={'/dashboard/product/create'}>
-                            <Button variant='contained' color='primary'>Add Product</Button>
+                        <Link href={'/dashboard/supplier_voucher/create'}>
+                            <Button variant='contained' color='primary'>Add Supplier Voucher</Button>
                         </Link>
                     </div>
                     <Grid container sx={{ paddingTop: '20px' }}>
                         <Grid size={6}>
-                            <Typography variant='body1' fontWeight={'bold'}>Products</Typography>
+                            <Typography variant='body1' fontWeight={'bold'}>Supplier Vouchers</Typography>
                         </Grid>
                         <Grid size={6}>
                             <div className='flex justify-end'>
@@ -185,14 +171,14 @@ export default function Products() {
                                         {column.label}
                                     </TableCell>
                                 ))}
-                                <TableCell style={{ minWidth: '170px' }}></TableCell>
+                                <TableCell></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {rows
                                 .map((row, index) => {
                                     return (
-                                        <TableRow hover role="checkbox" tabIndex={-1} key={row.product_id}>
+                                        <TableRow hover role="checkbox" tabIndex={-1} key={row.voucher_id}>
                                             <TableCell>{(currentPage * perPage) + index + 1}</TableCell>
                                             {columns.map((column) => {
                                                 const value = row[column.id];
@@ -204,9 +190,8 @@ export default function Products() {
                                             })}
                                             <TableCell align='right'>
                                                 <div>
-                                                    <Link href={'/dashboard/stock?product_id=' + row.product_id + '&product_info=' + row.product_name + ' - ' + row.product_code}><IconButton color='primary'><ListAlt /></IconButton></Link>
-                                                    <Link href={'/dashboard/product/create?id=' + row.product_id}><IconButton color='default'><Edit /></IconButton></Link>
-                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.product_id)}><Delete /></IconButton>
+                                                    <Link href={'/dashboard/supplier_voucher/create?id=' + row.voucher_id}><IconButton color='default'><Edit /></IconButton></Link>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.voucher_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -225,7 +210,7 @@ export default function Products() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
-            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.product_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.voucher_code} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );

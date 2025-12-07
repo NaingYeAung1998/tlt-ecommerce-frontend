@@ -319,14 +319,14 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
 
     return (
         <div className='flex items-center justify-center mt-[20vh]'>
-            <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px', width: '50%' }}>
+            <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px', width: '60%' }}>
                 <Alert severity="error" hidden={!showError}><div className="flex items-center gap-2">{`Failed to create track: `} <Typography fontWeight={'bold'}>{errorMessage}</Typography></div></Alert>
                 <br />
 
                 <Typography variant="body1" fontWeight={'bold'}>Add Track</Typography>
 
                 <Grid container columnSpacing={4} sx={{ paddingBottom: '20px' }}>
-                    <Grid size={6}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
                             <Select options={TRACK_STATUS_LIST} placeholder='Status' styles={{
                                 control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
@@ -338,17 +338,17 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
                             />
                         </div>
                     </Grid>
-                    <Grid size={6}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
                             <TextField type='number' InputLabelProps={{ shrink: !!track.quantity }} value={track.quantity} onChange={(e) => { handleInputChange("quantity", e.target.value) }} variant="outlined" label="Quantity" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
                         </div>
                     </Grid>
-                    <Grid size={6}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
                             <TextField InputLabelProps={{ shrink: !!track.note }} value={track.note} onChange={(e) => { handleInputChange("note", e.target.value) }} variant="outlined" label="Note" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
                         </div>
                     </Grid>
-                    <Grid size={6}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
                             <div className='w-[100%] border-[#CCCCCC] border-[1px] h-[55px] rounded-[7px] justify-center flex items-center'>
                                 <label className='text-[#777777]'>Checked Date - &nbsp; &nbsp;</label>
@@ -356,7 +356,7 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
                             </div>
                         </div>
                     </Grid>
-                    <Grid size={6}>
+                    <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
                             <Select options={warehouseList} placeholder='Warehouse' styles={{
                                 control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
