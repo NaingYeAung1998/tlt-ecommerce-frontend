@@ -1,8 +1,6 @@
 import { Box, Grid } from "@mui/material";
 import DashboardCard from "../components/dashboardCard";
 import { AccountBox as AccountBoxIcon, Apps as AppsIcon, MonetizationOn as MonetizationOnIcon, PointOfSale as PointOfSaleIcon } from "@mui/icons-material";
-import BarChart from "../components/dashboardBarChart";
-import DoughnutChart from "../components/dashboardDoughnutChart";
 
 function Dashboard() {
     return (
@@ -21,15 +19,6 @@ function Dashboard() {
                     <DashboardCard icon={<AccountBoxIcon />} title="Customers" amount="2,900" />
                 </Grid>
             </Grid>
-            <Grid container spacing={4} sx={{ paddingY: 10 }}>
-                <Grid size={{ xs: 12, lg: 8 }}>
-                    <BarChart />
-                </Grid>
-                <Grid size={{ xs: 12, lg: 4 }}>
-                    <DoughnutChart />
-                </Grid>
-            </Grid>
-
         </Box>
     )
 }
