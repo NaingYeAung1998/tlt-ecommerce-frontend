@@ -1,3 +1,5 @@
+import { IProductRelation, ISupplierRelation, IUnitRelation, IWarehouseRelation } from "@/app/interfaces";
+
 export interface IStockList {
     stock_id: string;
     stock_code: string;
@@ -13,16 +15,19 @@ export interface IStockList {
     buying_price_formatted: string;
     selling_price_formatted: string;
     fix_price_formatted: string;
+    wholesale_selling_price: string;
+    wholesale_fix_price: string;
+    wholesale_starting_quantity: string;
     note: string;
     created_on: string;
 }
 
 export interface IStock {
     stock_code: string;
-    product: IStockProduct;
-    supplier: IStockSupplier;
-    warehouse: IStockWarehouse;
-    unit: IStockUnit;
+    product: IProductRelation;
+    supplier: ISupplierRelation;
+    warehouse: IWarehouseRelation;
+    unit: IUnitRelation;
     quantity: string;
     buying_price: string;
     selling_price: string;
@@ -30,25 +35,8 @@ export interface IStock {
     wholesale_selling_price: string;
     wholesale_fix_price: string;
     wholesale_starting_quantity: string;
-    wholesale_starting_unit: IStockUnit;
+    wholesale_starting_unit: IUnitRelation;
     note: string;
-}
-
-export interface IStockProduct {
-    product_id: string;
-}
-
-export interface IStockSupplier {
-    supplier_id: string;
-}
-
-
-export interface IStockWarehouse {
-    warehouse_id: string;
-}
-
-export interface IStockUnit {
-    unit_id: string;
 }
 
 

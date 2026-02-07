@@ -1,3 +1,5 @@
+import { IStockRelation, ISupplierRelation } from "@/app/interfaces";
+
 export interface ISupplierVoucherList {
     voucher_id: string;
     voucher_code: string;
@@ -11,21 +13,14 @@ export interface ISupplierVoucher {
     voucher_code: string;
     total_amount: number;
     total_paid: number;
-    supplier: ISupplierVoucherSupplier;
+    supplier?: ISupplierRelation;
     stocks: ISupplierVoucherStock[],
     payments: ISupplierVoucherPayment[]
 }
 
-export interface ISupplierVoucherSupplier {
-    supplier_id?: string;
-}
 
 export interface ISupplierVoucherStock {
-    stock: ISupplierVoucherStockId
-}
-
-export interface ISupplierVoucherStockId {
-    stock_id: string;
+    stock: IStockRelation
 }
 
 export interface ISupplierVoucherPayment {

@@ -35,6 +35,7 @@ function CustomTabPanel(props: TabPanelProps) {
 export default function StockHistory() {
     const searchParams = useSearchParams();
     const id = searchParams.get('id') || '';
+    const product_id = searchParams.get('product_id') || '';
 
     const [tab, setTab] = useState(0)
 
@@ -52,7 +53,7 @@ export default function StockHistory() {
                     </Tabs>
                 </Box>
                 <CustomTabPanel value={tab} index={0}>
-                    <Tracks stock_id={id} />
+                    <Tracks stock_id={id} product_id={product_id} />
                 </CustomTabPanel>
                 <CustomTabPanel value={tab} index={1}>
                     <Payments stock_id={id} />

@@ -57,7 +57,7 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
                         </List>
                     </Collapse>
                     <ListItem>
-                        <SidebarButton icon={<ReceiptIcon />} label="Orders" selected={false} />
+                        <SidebarButton icon={<ReceiptIcon />} label="Orders" selected={currentRoute.includes('order')} handleClick={() => handleRoute('/dashboard/order')} />
                     </ListItem>
                     <ListItem>
                         <SidebarButton icon={<AccountBoxIcon />} label="Customer" selected={currentRoute.includes('customer')} handleClick={() => handleRoute('/dashboard/customer')} />

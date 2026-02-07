@@ -45,7 +45,7 @@ function AddSupplierVoucher() {
 
     const handleSave = async () => {
         const data = { ...supplierVoucher };
-        data.supplier = { supplier_id: supplier?.value }
+        data.supplier = supplier ? { supplier_id: supplier?.value } : undefined
         data.stocks = [];
         data.payments = [];
         selectedStocks.forEach((stock: any) => {

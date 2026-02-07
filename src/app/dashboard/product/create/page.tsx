@@ -33,12 +33,9 @@ function AddProduct() {
 
     const handleSave = async () => {
         const data = { ...product };
-        data.category = { category_id: null };
-        data.grade = { grade_id: null };
-        data.per_bag_unit = { unit_id: null };
-        data.category.category_id = category ? category.value : null;
-        data.grade.grade_id = grade ? grade.value : null;
-        data.per_bag_unit.unit_id = perBagUnit ? perBagUnit.value : null;
+        data.category = category ? { category_id: category.value } : undefined;
+        data.grade = grade ? { grade_id: grade.value } : undefined;
+        data.per_bag_unit = perBagUnit ? { unit_id: perBagUnit.value } : undefined;
         console.log(data);
         if (id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product/" + id
@@ -223,7 +220,7 @@ function AddProduct() {
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                         <div className="pt-[20px]">
-                            <TextField InputLabelProps={{ shrink: !!product.quantity_per_bag }} value={product.quantity_per_bag} onChange={(e) => { handleInputChange("quantity_per_bag", e.target.value) }} variant="outlined" label="Quantity Per Bag" sx={{ width: { xs: '100%', lg: '100%' } }} />
+                            <TextField type="number" InputLabelProps={{ shrink: !!product.quantity_per_bag }} value={product.quantity_per_bag} onChange={(e) => { handleInputChange("quantity_per_bag", e.target.value) }} variant="outlined" label="Quantity Per Bag" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
                         </div>
                     </Grid>
                 </Grid>

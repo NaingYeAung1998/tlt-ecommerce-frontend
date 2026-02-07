@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { IUnitList } from "./dashboard/unit/interfaces/unit.interface";
 
 export const formatCurrency = (amount: number) => {
@@ -30,7 +31,7 @@ export const calculateRoundUpUnit = (hierarchy: IUnitList[], lowestQty: number) 
     }
     return roundupUnits;
 
-}
+};
 
 export const calculateLowestUnitQuantity = (hierarchy: IUnitList[], quantityList: any[]) => {
     let currentUnitQuantity = 0;

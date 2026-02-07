@@ -9,55 +9,34 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { Alert, Box, Button, Grid, IconButton, Input, InputAdornment, Typography } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Inventory, ListAlt, Search as SearchIcon, Update as UpdateIcon } from '@mui/icons-material';
+import { Delete, Edit, Search as SearchIcon } from '@mui/icons-material';
 import { useSearchParams } from 'next/navigation';
 import { KeyboardEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
-import { IStockList } from './interfaces/stock.interface';
-import { calculateQuantityWithHierarchy, getUnitHierarchyByProduct } from '@/app/utils';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
+import { IOrderList } from './interfaces/order.interface';
 
 interface Column {
-    id: 'stock_code' | 'stock_product' | 'stock_supplier' | 'stock_unit' | 'quantity' | 'buying_price_formatted' | 'selling_price_formatted' | 'fix_price_formatted' | 'note' | 'created_on';
+    id: 'voucher_code' | 'customer_name' | 'total_amount' | 'total_paid' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
 }
 
 const columns: readonly Column[] = [
-    { id: 'stock_code', label: 'Code', minWidth: 100 },
-    { id: 'stock_product', label: 'Product', minWidth: 170 },
+    { id: 'voucher_code', label: 'Voucher Code', minWidth: 170 },
+    { id: 'customer_name', label: 'Customer', minWidth: 100 },
     {
-        id: 'stock_supplier',
-        label: 'Supplier',
+        id: 'total_amount',
+        label: 'Total Amount',
         minWidth: 170,
         align: 'left',
     },
     {
-        id: 'quantity',
-        label: 'Quantity',
-        minWidth: 100,
-        align: 'left',
-
-    },
-    {
-        id: 'buying_price_formatted',
-        label: 'Buying Price',
-        minWidth: 170,
-        align: 'left',
-
-    },
-    {
-        id: 'selling_price_formatted',
-        label: 'Selling Price',
-        minWidth: 170,
-        align: 'left',
-
-    },
-    {
-        id: 'fix_price_formatted',
-        label: 'Fixed Price',
+        id: 'total_paid',
+        label: 'Total Paid',
         minWidth: 170,
         align: 'left',
 
@@ -71,19 +50,19 @@ const columns: readonly Column[] = [
 ];
 
 
-export default function Stocks() {
+export default function Orders() {
     const searchParams = useSearchParams();
 
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(0)
     const [perPage, setPerPage] = useState(10);
-    const [rows, setRows] = useState<IStockList[]>([]);
+    const [rows, setRows] = useState<IOrderList[]>([]);
     const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteSelected, setDeleteSeleceted] = useState<IOrderList | null>(null);
     const showSuccess = searchParams.get('showSuccess');
-    const stock = searchParams.get('stock');
+    const customer = searchParams.get('customer');
     const action = searchParams.get('action');
-    const product_id = searchParams.get('product_id');
-    const product_info = searchParams.get('product_info');
 
     const handleChangePage = (event: unknown, newPage: number) => {
         setCurrentPage(newPage);
@@ -96,67 +75,70 @@ export default function Stocks() {
 
     const handleSearch = async (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
-            await getStocks()
+            await getOrders()
         }
     }
 
-    const getStocks = async () => {
-        if (product_id) {
-            const unitHierarchy = await getUnitHierarchyByProduct(product_id);
-            const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/getByProduct?product_id=${product_id}&search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
-            let response = await fetch(url);
-            if (response.ok) {
-                let result = await response.json();
-                if (result.data) {
-                    if (unitHierarchy) {
-                        result.data.map((stock: IStockList) => {
-                            let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: stock.stock_unit_id, unit_name: stock.stock_unit, quantity: stock.quantity }])
-                            stock.quantity = formattedQuantity.quantityString;
-                        })
-                    }
-
-                }
-                setRows(result.data);
-                setTotalLength(result.totalLength)
-            } else {
-
-            }
-        } else {
-            const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock?search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
-            let response = await fetch(url);
-            if (response.ok) {
-                let result = await response.json();
-                setRows(result.data);
-                setTotalLength(result.totalLength)
-            } else {
-
-            }
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.order_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
         }
+    }
 
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}order/${deleteSelected?.order_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getOrders();
+    }
+
+    const getOrders = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}order?search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
+        let response = await fetch(url);
+        if (response.ok) {
+            let result = await response.json();
+            result.data.forEach((order: any) => {
+                order.customer_name = order.customer_name ? order.customer_name : order.customer_relation_name
+            })
+            setRows(result.data);
+            setTotalLength(result.totalLength)
+        } else {
+
+        }
     }
 
     useEffect(() => {
-        getStocks();
+        getOrders();
     }, [])
 
     useEffect(() => {
-        getStocks()
+        getOrders()
     }, [currentPage, perPage])
 
     return (
         <div>
 
             <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-                <Alert severity='success' hidden={!showSuccess}>{`Stock for ${stock} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
+                <Alert severity='success' hidden={!showSuccess}>{`Voucher for Customer ${customer} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
                 <Box sx={{ padding: 2 }}>
                     <div className='flex justify-end pb-5'>
-                        <Link href={'/dashboard/stock/create?product_id=' + product_id}>
-                            <Button variant='contained' color='primary'>Add Stock</Button>
+                        <Link href={'/dashboard/order/create'}>
+                            <Button variant='contained' color='primary'>Add Order</Button>
                         </Link>
                     </div>
                     <Grid container sx={{ paddingTop: '20px' }}>
                         <Grid size={6}>
-                            <Typography variant='body1' fontWeight={'bold'}>{`Stocks ${product_id ? ` ( ${product_info} )` : ``}`}</Typography>
+                            <Typography variant='body1' fontWeight={'bold'}>Orders</Typography>
                         </Grid>
                         <Grid size={6}>
                             <div className='flex justify-end'>
@@ -192,14 +174,14 @@ export default function Stocks() {
                                         {column.label}
                                     </TableCell>
                                 ))}
-                                <TableCell style={{ minWidth: '170px' }}></TableCell>
+                                <TableCell></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {rows
                                 .map((row, index) => {
                                     return (
-                                        <TableRow hover role="checkbox" tabIndex={-1} key={row.stock_id}>
+                                        <TableRow hover role="checkbox" tabIndex={-1} key={row.order_id}>
                                             <TableCell>{(currentPage * perPage) + index + 1}</TableCell>
                                             {columns.map((column) => {
                                                 const value = row[column.id];
@@ -211,9 +193,8 @@ export default function Stocks() {
                                             })}
                                             <TableCell align='right'>
                                                 <div>
-                                                    <Link href={'/dashboard/stock/create?id=' + row.stock_id + '&product_id=' + product_id}><IconButton color='default'><EditIcon /></IconButton></Link>
-                                                    <Link href={'/dashboard/stock/history?id=' + row.stock_id + '&product_id=' + product_id}><IconButton color='default'><UpdateIcon /></IconButton></Link>
-                                                    <IconButton color='warning'><DeleteIcon /></IconButton>
+                                                    <Link href={'/dashboard/order/create?id=' + row.order_id}><IconButton color='default'><Edit /></IconButton></Link>
+                                                    <IconButton color='warning' onClick={() => handleDeleteSelect(row.order_id)}><Delete /></IconButton>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
@@ -232,6 +213,7 @@ export default function Stocks() {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.voucher_code} handleClose={handleDeleteClose} handleDelete={handleDelete} />
         </div>
 
     );

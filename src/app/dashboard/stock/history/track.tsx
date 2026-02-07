@@ -17,8 +17,10 @@ import moment from 'moment';
 import { MOMENT_FORMAT, TRACK_STATUS_LIST } from '@/app/constants';
 import { AddTrackProps, ITrack, ITrackInfo, ITrackList, StockTrackProps } from '../interfaces/track.interface';
 import Select from 'react-select'
-import { ISelect } from '@/app/interfaces';
+import { IQunatityCalculatorParent, ISelect } from '@/app/interfaces';
 import { IWarehouse } from '../../warehouse/intefaces/warehouse.interfaces';
+import { IUnitList } from '../../unit/interfaces/unit.interface';
+import QuantityCalculator from '@/app/components/quantityCalculator';
 
 interface Column {
     id: 'quantity' | 'checked_date' | 'warehouse_name' | 'status' | 'note' | 'created_on';
@@ -53,7 +55,7 @@ const columns: readonly Column[] = [
 ];
 
 
-const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
+const Tracks: FC<StockTrackProps> = ({ stock_id, product_id }) => {
     const searchParams = useSearchParams();
 
     const [search, setSearch] = useState('');
@@ -64,6 +66,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
     const [addTrackModal, setAddTrackModal] = useState(false);
     const [selectedTrackId, setSelectedTrackId] = useState('');
     const [trackInfo, setTrackInfo] = useState<ITrackInfo>({} as ITrackInfo);
+    const [unitHierarchy, setUnitHierarchy] = useState<IUnitList[]>([])
     const showSuccess = searchParams.get('showSuccess');
     const track = searchParams.get('track');
     const action = searchParams.get('action');
@@ -110,6 +113,15 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
         }
     }
 
+    const getProductUnitHierarchy = async () => {
+        const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product/getProductUnitHierarchy/" + product_id
+        let response = await fetch(url);
+        if (response.ok) {
+            let result: IUnitList[] = await response.json();
+            setUnitHierarchy(result);
+        }
+    }
+
     const handleRefresh = () => {
         getTracks();
         getTrackInfo();
@@ -118,6 +130,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
     useEffect(() => {
         getTracks();
         getTrackInfo();
+        getProductUnitHierarchy();
     }, [])
 
     useEffect(() => {
@@ -218,14 +231,14 @@ const Tracks: FC<StockTrackProps> = ({ stock_id }) => {
             />
 
             <Modal open={addTrackModal} onClose={handleAddTrackModalClose} disableEscapeKeyDown={false}>
-                <AddTrack stock_id={stock_id} handleClose={handleAddTrackModalClose} track_id={selectedTrackId} handleRefresh={handleRefresh} />
+                <AddTrack stock_id={stock_id} handleClose={handleAddTrackModalClose} track_id={selectedTrackId} unitHierarchy={unitHierarchy} product_id={product_id} handleRefresh={handleRefresh} />
             </Modal>
         </div>
 
     );
 }
 
-const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRefresh }) => {
+const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, unitHierarchy, product_id, handleRefresh }) => {
 
     const [track, setTrack] = useState<ITrack>({ stock: { stock_id } } as ITrack)
     const [status, setStatus] = useState<ISelect | null | undefined>(null);
@@ -233,11 +246,16 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
     const [checkedDate, setCheckedDate] = useState(today.toISOString().split('T')[0]);
     const [warehouseList, setWarehouseList] = useState<ISelect[]>([]);
     const [warehouse, setWarehouse] = useState<ISelect | null>(null)
+    const [unitQty, setUnitQty] = useState<IQunatityCalculatorParent | null>(null)
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
-    const handleInputChange = (field: 'quantity' | 'checked_date' | 'note', value: string) => {
+    const handleInputChange = (field: 'checked_date' | 'note', value: string) => {
         setTrack({ ...track, [field]: value })
+    }
+
+    const handleUnitQtyChange = (qty: number, unitId: string) => {
+        setUnitQty({ quantity: qty, unitId: unitId })
     }
 
     const handleSave = async () => {
@@ -246,6 +264,12 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
         data.checked_date = checkedDate;
         data.warehouse = { warehouse_id: warehouse ? warehouse?.value : '' }
         data.stock = { stock_id: stock_id }
+        if (unitQty) {
+            data.quantity = unitQty.quantity.toString();
+            data.unit = { unit_id: unitQty.unitId }
+        }
+
+
         if (track_id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/track/" + track_id
             let response = await fetch(url, {
@@ -311,7 +335,6 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
 
     useEffect(() => {
         getWarehouseList();
-
         if (track_id) {
             getExistingTrack(track_id);
         }
@@ -340,7 +363,8 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, handleRe
                     </Grid>
                     <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
-                            <TextField type='number' InputLabelProps={{ shrink: !!track.quantity }} value={track.quantity} onChange={(e) => { handleInputChange("quantity", e.target.value) }} variant="outlined" label="Quantity" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
+                            <QuantityCalculator key={track?.track_id} parentId={track?.track_id} unitHierarchy={unitHierarchy} parentQty={track ? parseFloat(track.quantity) : 0} parentUnitId={track ? track.unit?.unit_id : ''} updateParent={handleUnitQtyChange} />
+                            {/* <TextField type='number' InputLabelProps={{ shrink: !!track.quantity }} value={track.quantity} onChange={(e) => { handleInputChange("quantity", e.target.value) }} variant="outlined" label="Quantity" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} /> */}
                         </div>
                     </Grid>
                     <Grid size={{ xs: 12, lg: 6 }}>

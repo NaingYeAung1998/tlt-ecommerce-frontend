@@ -1,3 +1,4 @@
+import { IStockRelation } from "@/app/interfaces";
 import { IStockList } from "./stock.interface"
 
 export interface IPaymentInfo extends IStockList {
@@ -7,17 +8,13 @@ export interface IPaymentInfo extends IStockList {
 
 export interface IPayment {
     payment_id: string;
-    stock: IPaymentStock;
+    stock: IStockRelation;
     amount: number;
     payment_date: string;
     payment_channel: string;
     note: string;
     created_on: string;
     amount_formatted: string;
-}
-
-export interface IPaymentStock {
-    stock_id: string
 }
 
 
