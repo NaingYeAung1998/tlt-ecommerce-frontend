@@ -3,9 +3,9 @@ export interface IUnit {
     unit_name: string;
     unit_symbol: string;
     parent_unit?: IUnitParent | null;
-    parent_unit_name: string;
-    quantity_per_parent_unit: any;
-    created_on: string;
+    parent_unit_name?: string;
+    quantity_per_parent_unit?: any;
+    created_on?: string;
 }
 
 export interface IUnitParent {

@@ -47,17 +47,18 @@ export default function StockHistory() {
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
             <Box sx={{ width: '100%' }}>
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tabs value={tab} onChange={handleChange}>
+                    <Tracks stock_id={id} product_id={product_id} />
+                    {/* <Tabs value={tab} onChange={handleChange}>
                         <Tab label="Stocks" sx={{ width: '50% !important', maxWidth: 'none' }} />
                         <Tab label="Payments" sx={{ width: '50% !important', maxWidth: 'none' }} />
-                    </Tabs>
+                    </Tabs> */}
                 </Box>
-                <CustomTabPanel value={tab} index={0}>
+                {/* <CustomTabPanel value={tab} index={0}>
                     <Tracks stock_id={id} product_id={product_id} />
                 </CustomTabPanel>
                 <CustomTabPanel value={tab} index={1}>
                     <Payments stock_id={id} />
-                </CustomTabPanel>
+                </CustomTabPanel> */}
             </Box>
         </Paper>
 

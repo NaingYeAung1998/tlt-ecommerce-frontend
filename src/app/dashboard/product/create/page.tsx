@@ -10,7 +10,8 @@ import { ISelect } from "@/app/interfaces";
 import { ICategory } from "../../category/interfaces/category.interface";
 import { IGrade } from "../../grade/interfaces/grade.interface";
 import { Divider } from "@/app/components/divider";
-import { IUnit } from "../../unit/interfaces/unit.interface";
+import { IUnit, IUnitList } from "../../unit/interfaces/unit.interface";
+import { bindAndCalculatePerBagUnitHierarchy, bindPerBagUnitHierarchy, calculateLowestUnitQuantity, calculateQuantityWithHierarchy, findAndCalculateUnitHierarchy } from "@/app/utils";
 
 function AddProduct() {
     const searchParams = useSearchParams();
@@ -21,14 +22,30 @@ function AddProduct() {
     const [categoryList, setCategoryList] = useState<ISelect[]>([]);
     const [gradeList, setGradeList] = useState<ISelect[]>([]);
     const [unitList, setUnitList] = useState<ISelect[]>([]);
+    const [unitHierarchy, setUnitHierarchy] = useState<IUnitList[]>([])
     const [category, setCategory] = useState<ISelect | null>(null);
     const [grade, setGrade] = useState<ISelect | null>(null);
     const [perBagUnit, setPerBagUnit] = useState<ISelect | null>(null)
+    const [wholesaleUnit, setWholesaleUnit] = useState<ISelect | null>(null);
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    const handleInputChange = (field: 'product_name' | 'product_code' | 'product_description' | 'quantity_per_bag' | 'note', value: string) => {
+    const handleInputChange = (field: 'product_name' | 'product_code' | 'product_description' | 'quantity_per_bag' | 'selling_price' | 'fix_price' | 'wholesale_selling_price' | 'wholesale_fix_price' | 'wholesale_starting_quantity' | 'note', value: string) => {
         setProduct({ ...product, [field]: value })
+    }
+
+    const handlePerBagUnitChange = async (unit: ISelect | null, quantity_per_bag: string) => {
+        setPerBagUnit(unit)
+        if (unit) {
+            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "unit/findUnitHierarchy/" + unit.value
+            let response = await fetch(url);
+            if (response.ok) {
+                const result = await response.json()
+                const perBagUnitHierarchy = bindPerBagUnitHierarchy(result, unit?.value || '', quantity_per_bag)
+                setUnitHierarchy(perBagUnitHierarchy)
+                return perBagUnitHierarchy;
+            }
+        }
     }
 
     const handleSave = async () => {
@@ -36,6 +53,9 @@ function AddProduct() {
         data.category = category ? { category_id: category.value } : undefined;
         data.grade = grade ? { grade_id: grade.value } : undefined;
         data.per_bag_unit = perBagUnit ? { unit_id: perBagUnit.value } : undefined;
+        let wholesaleLowestUnitQty = calculateLowestUnitQuantity(unitHierarchy, [{ unit_id: wholesaleUnit?.value, unit_name: wholesaleUnit?.label, quantity: data.wholesale_starting_quantity }]);
+        data.wholesale_starting_quantity = wholesaleLowestUnitQty?.quantity?.toString();
+        data.wholesale_starting_unit = { unit_id: wholesaleLowestUnitQty?.unit_id };
         console.log(data);
         if (id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product/" + id
@@ -106,7 +126,7 @@ function AddProduct() {
         let response = await fetch(url + "/" + id);
         if (response.ok) {
             let result = await response.json();
-            setProduct(result);
+            // setProduct(result);
             if (result.category) {
                 setCategory({ value: result.category.category_id, label: result.category.category_name });
             }
@@ -114,9 +134,19 @@ function AddProduct() {
                 setGrade({ value: result.grade.grade_id, label: result.grade.grade_name });
             }
             if (result.per_bag_unit) {
-                setPerBagUnit({ value: result.per_bag_unit.unit_id, label: result.per_bag_unit.unit_name })
-            }
+                const perBagUnitHierarchy = await handlePerBagUnitChange({ value: result.per_bag_unit.unit_id, label: result.per_bag_unit.unit_name }, result.quantity_per_bag)
+                if (perBagUnitHierarchy) {
+                    let formmatedWholesaleStartingQuantity = calculateQuantityWithHierarchy(perBagUnitHierarchy, [{ unit_id: result.wholesale_starting_unit?.unit_id, unit_name: result.wholesale_starting_unit?.unit_name, quantity: result.wholesale_starting_quantity }]);
+                    // wholesale quantity list should always return only one value
+                    console.log(formmatedWholesaleStartingQuantity)
+                    if (formmatedWholesaleStartingQuantity.quantityList[0]) {
+                        setWholesaleUnit({ label: formmatedWholesaleStartingQuantity.quantityList[0].unit_name, value: formmatedWholesaleStartingQuantity.quantityList[0].unit_id })
+                        result.wholesale_starting_quantity = formmatedWholesaleStartingQuantity.quantityList[0].quantity;
+                    }
+                }
 
+            }
+            setProduct(result)
 
         }
     }
@@ -202,8 +232,9 @@ function AddProduct() {
                     </Grid>
                 </Grid>
             </div>
+
             <Divider />
-            <div className="pt-[40px]">
+            <div className="pt-[40px] pb-[40px]">
                 <Typography variant="body1" fontWeight={'bold'}>Unit Definition</Typography>
                 <Grid container columnSpacing={4}>
                     <Grid size={{ xs: 12, sm: 6 }}>
@@ -214,7 +245,7 @@ function AddProduct() {
                                 menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
                             }}
                                 value={perBagUnit}
-                                onChange={(option) => setPerBagUnit(option)}
+                                onChange={(option) => handlePerBagUnitChange(option, product.quantity_per_bag.toString())}
                             />
                         </div>
                     </Grid>
@@ -226,6 +257,61 @@ function AddProduct() {
                 </Grid>
 
             </div>
+
+            <Divider />
+
+            <div className="pt-[40px] pb-[40px]">
+                <Typography variant="body1" fontWeight={'bold'}>Retail Price</Typography>
+
+                <Grid container columnSpacing={4}>
+
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <div className="pt-[20px]">
+                            <TextField type="number" InputLabelProps={{ shrink: !!product.selling_price }} value={product.selling_price} onChange={(e) => { handleInputChange("selling_price", e.target.value) }} variant="outlined" label="Selling Price" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
+                        </div>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <div className="pt-[20px]">
+                            <TextField type="number" InputLabelProps={{ shrink: !!product.fix_price }} value={product.fix_price} onChange={(e) => { handleInputChange("fix_price", e.target.value) }} variant="outlined" label="Fixed Price" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
+                        </div>
+                    </Grid>
+                </Grid>
+            </div>
+
+            <Divider />
+            <div className="pt-[40px] pb-[40px]">
+                <Typography variant="body1" fontWeight={'bold'}>Wholesale Price</Typography>
+
+                <Grid container columnSpacing={4}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <div className="pt-[20px]">
+                            <TextField type="number" InputLabelProps={{ shrink: !!product.wholesale_selling_price }} value={product.wholesale_selling_price} onChange={(e) => { handleInputChange("wholesale_selling_price", e.target.value) }} variant="outlined" label="Wholesale Selling Price" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
+                        </div>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <div className="pt-[20px]">
+                            <TextField type="number" InputLabelProps={{ shrink: !!product.wholesale_fix_price }} value={product.wholesale_fix_price} onChange={(e) => { handleInputChange("wholesale_fix_price", e.target.value) }} variant="outlined" label="Wholesale Fixed Price" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
+                        </div>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <div className="pt-[20px] flex gap-4">
+                            <TextField type="number" InputLabelProps={{ shrink: !!product.wholesale_starting_quantity }} value={product.wholesale_starting_quantity} onChange={(e) => { handleInputChange("wholesale_starting_quantity", e.target.value) }} variant="outlined" label="Wholesale Starting Quantity" sx={{ width: { xs: '70%', lg: '70%' }, zIndex: 0 }} />
+                            <div className="w-[30%]">
+                                <Select options={unitList} placeholder='Unit' styles={{
+                                    control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
+                                    menu: (styles) => ({ ...styles, width: '100%' }),
+                                    menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
+                                }}
+                                    value={wholesaleUnit}
+                                    onChange={(option) => setWholesaleUnit(option)}
+                                />
+                            </div>
+
+                        </div>
+                    </Grid>
+                </Grid>
+            </div>
+
 
             <div className="flex justify-end pt-[40px] gap-4">
                 <Link href={'/dashboard/product'}><Button variant="outlined" color="warning">Cancel</Button></Link>

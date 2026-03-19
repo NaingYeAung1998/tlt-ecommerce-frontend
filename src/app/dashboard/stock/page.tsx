@@ -16,10 +16,12 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IStockList } from './interfaces/stock.interface';
-import { calculateQuantityWithHierarchy, getUnitHierarchyByProduct } from '@/app/utils';
+import { calculateQuantityWithHierarchy, findAndCalculateUnitHierarchy, formatCurrency, getAllUnitHierarchies, getUnitHierarchyByProduct } from '@/app/utils';
+import { ITrackInfo } from './interfaces/track.interface';
+import { IUnitList } from '../unit/interfaces/unit.interface';
 
 interface Column {
-    id: 'stock_code' | 'stock_product' | 'stock_supplier' | 'stock_unit' | 'quantity' | 'buying_price_formatted' | 'selling_price_formatted' | 'fix_price_formatted' | 'note' | 'created_on';
+    id: 'stock_code' | 'stock_product' | 'stock_supplier' | 'stock_unit' | 'quantity' | 'buying_price_formatted' | 'selling_price_formatted' | 'total_available' | 'note' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -56,8 +58,8 @@ const columns: readonly Column[] = [
 
     },
     {
-        id: 'fix_price_formatted',
-        label: 'Fixed Price',
+        id: 'total_available',
+        label: 'Available Quantity',
         minWidth: 170,
         align: 'left',
 
@@ -77,7 +79,7 @@ export default function Stocks() {
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(0)
     const [perPage, setPerPage] = useState(10);
-    const [rows, setRows] = useState<IStockList[]>([]);
+    const [rows, setRows] = useState<ITrackInfo[]>([]);
     const [totalLength, setTotalLength] = useState(0);
     const showSuccess = searchParams.get('showSuccess');
     const stock = searchParams.get('stock');
@@ -109,9 +111,8 @@ export default function Stocks() {
                 let result = await response.json();
                 if (result.data) {
                     if (unitHierarchy) {
-                        result.data.map((stock: IStockList) => {
-                            let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: stock.stock_unit_id, unit_name: stock.stock_unit, quantity: stock.quantity }])
-                            stock.quantity = formattedQuantity.quantityString;
+                        result.data.map((stock: ITrackInfo) => {
+                            stock = formatStockData(stock, unitHierarchy)
                         })
                     }
 
@@ -122,10 +123,15 @@ export default function Stocks() {
 
             }
         } else {
+            const unitHierarchies = await getAllUnitHierarchies();
             const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock?search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
             let response = await fetch(url);
             if (response.ok) {
                 let result = await response.json();
+                result.data.map((stock: ITrackInfo) => {
+                    const unitHierarchy = unitHierarchies?.find(x => x.some(y => y.unit_id == stock.stock_unit_id))
+                    stock = formatStockData(stock, unitHierarchy)
+                })
                 setRows(result.data);
                 setTotalLength(result.totalLength)
             } else {
@@ -133,6 +139,19 @@ export default function Stocks() {
             }
         }
 
+    }
+
+    const formatStockData = (stock: ITrackInfo, unitHierarchy?: IUnitList[]) => {
+        stock.buying_price_formatted = formatCurrency(parseFloat(stock.buying_price))
+        stock.selling_price_formatted = formatCurrency(parseFloat(stock.selling_price))
+        stock.total_available = ((parseFloat(stock.total_stored) + parseFloat(stock.total_received)) - (parseFloat(stock.total_sold) + parseFloat(stock.total_transferred))).toString()
+        if (unitHierarchy) {
+            let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: stock.stock_unit_id, unit_name: stock.stock_unit, quantity: stock.quantity }])
+            let formattedAvailableQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: stock.stock_unit_id, unit_name: stock.stock_unit, quantity: stock.total_available }])
+            stock.quantity = formattedQuantity.quantityString;
+            stock.total_available = formattedAvailableQuantity.quantityString;
+        }
+        return stock;
     }
 
     useEffect(() => {
@@ -211,8 +230,8 @@ export default function Stocks() {
                                             })}
                                             <TableCell align='right'>
                                                 <div>
-                                                    <Link href={'/dashboard/stock/create?id=' + row.stock_id + '&product_id=' + product_id}><IconButton color='default'><EditIcon /></IconButton></Link>
-                                                    <Link href={'/dashboard/stock/history?id=' + row.stock_id + '&product_id=' + product_id}><IconButton color='default'><UpdateIcon /></IconButton></Link>
+                                                    <Link href={'/dashboard/stock/create?id=' + row.stock_id + '&product_id=' + (product_id ? product_id : row.stock_product_id)}><IconButton color='default'><EditIcon /></IconButton></Link>
+                                                    <Link href={'/dashboard/stock/history?id=' + row.stock_id + '&product_id=' + (product_id ? product_id : row.stock_product_id)}><IconButton color='default'><UpdateIcon /></IconButton></Link>
                                                     <IconButton color='warning'><DeleteIcon /></IconButton>
                                                 </div>
                                             </TableCell>

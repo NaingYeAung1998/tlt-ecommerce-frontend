@@ -3,8 +3,12 @@ import { IUnitList } from "../../unit/interfaces/unit.interface";
 import { IStockList } from "./stock.interface";
 
 export interface ITrackInfo extends IStockList {
-    total_delivered: number;
-    total_stored: number;
+    total_delivered: string;
+    total_stored: string;
+    total_transferred: string;
+    total_received: string;
+    total_sold: string;
+    total_available: string;
 }
 
 export interface ITrack {
@@ -15,7 +19,7 @@ export interface ITrack {
     unit: IUnitRelation
     checked_date: string;
     status: string;
-    note: string;
+    note?: string;
     created_on: string;
 }
 

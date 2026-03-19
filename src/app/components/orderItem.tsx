@@ -62,7 +62,7 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
     const handleProductChange = async (option: any) => {
         if (option) {
             await getProductUnitHierarchy(option?.value)
-            await getProductStocks(option?.value)
+            // await getProductStocks(option?.value)
             let prevItem: IOrderItemDisplay = { ...item }
             prevItem.product = { product_id: option.value }
             prevItem.product_name = option.label
@@ -96,12 +96,12 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
 
         let prevItem = { ...item }
         let product = products.find(x => x.product_id == prevItem.product?.product_id);
-        let stock = productStocks.find(x => x.stock_id == prevItem.stock?.stock_id);
+        // let stock = productStocks.find(x => x.stock_id == prevItem.stock?.stock_id);
 
-        if (product && stock) {
+        if (product) {
             let product_quantity_per_bag = calculateLowestUnitQuantity(unitHierarchy, [{ unit_id: product.product_per_bag_unit_id, quantity: product.product_per_bag_qty }])
-            let perBagPrice = prevItem.quantity >= parseFloat(stock.wholesale_starting_quantity) ? parseFloat(stock.wholesale_selling_price) : parseFloat(stock.selling_price)
-            let perBagFixedPrice = prevItem.quantity >= parseFloat(stock.wholesale_starting_quantity) ? parseFloat(stock.wholesale_fix_price) : parseFloat(stock.fix_price)
+            let perBagPrice = prevItem.quantity >= parseFloat(product.wholesale_starting_quantity) ? parseFloat(product.wholesale_selling_price) : parseFloat(product.selling_price)
+            let perBagFixedPrice = prevItem.quantity >= parseFloat(product.wholesale_starting_quantity) ? parseFloat(product.wholesale_fix_price) : parseFloat(product.fix_price)
             let price = (perBagPrice / product_quantity_per_bag.quantity) * prevItem.quantity;
             let fixedPrice = (perBagFixedPrice / product_quantity_per_bag.quantity) * prevItem.quantity;
 
@@ -127,7 +127,7 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
 
     useEffect(() => {
         getProductUnitHierarchy(item.product ? item.product.product_id : '');
-        getProductStocks(item.product ? item.product.product_id : '');
+        // getProductStocks(item.product ? item.product.product_id : '');
     }, [item.product])
 
     const productOptions: ISelect[] = products.map((product) => { return { value: product.product_id, label: `${product.product_name} (${product.product_grade}) (${product.product_code})` } })
@@ -153,7 +153,7 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
                     onChange={(option) => handleProductChange(option)}
                 />
             </Grid>
-            <Grid size={{ sm: 12, md: 6 }}>
+            {/* <Grid size={{ sm: 12, md: 6 }}>
                 <Select options={productStockOptions} placeholder='Stocks' styles={{
                     control: (styles) => ({ ...styles, width: '100%', height: '60px' }),
                     menu: (styles) => ({ ...styles, width: '100%' }),
@@ -162,7 +162,7 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
                     value={stockOption}
                     onChange={(option) => handleStockChange(option)}
                 />
-            </Grid>
+            </Grid> */}
             <Grid size={{ sm: 12, md: 6 }}>
                 <QuantityCalculator unitHierarchy={item.unitHierarchy.length > 0 ? item.unitHierarchy : unitHierarchy} parentId={item.item_id ? item.item_id : ''} parentQty={item.quantity} parentUnitId={item.unit ? item.unit.unit_id : ''} updateParent={handleQuantityChange} />
             </Grid>
@@ -190,9 +190,9 @@ export const OrderItemDisplay: FC<OrderItemDisplayProps> = ({ item_id, product_n
             <TableCell style={{ maxWidth: '100px' }}>
                 {product_name}
             </TableCell>
-            <TableCell style={{ maxWidth: '100px' }}>
+            {/* <TableCell style={{ maxWidth: '100px' }}>
                 {stock_name}
-            </TableCell>
+            </TableCell> */}
             <TableCell style={{ maxWidth: '100px' }}>
                 {unit_quantity}
             </TableCell>

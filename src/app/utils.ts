@@ -75,7 +75,8 @@ export const calculateQuantityWithHierarchy = (unitHierarchy: IUnitList[], quant
         roundupQuantityString += `${qty.quantity} ${qty.unit_name} `;
         roundupQuantityList.push({ id: qty.unit_id, quantity: qty.quantity, unit_id: qty.unit_id, unit_name: qty.unit_name, unit: { value: qty.unit_id, label: qty.unit_name } })
     })
-    return { quantityList: roundupQuantityList, quantityString: roundupQuantityString };
+    roundupQuantityString = roundupQuantityString != "" ? roundupQuantityString : "0"
+    return { quantityList: roundupQuantityList, quantityString: roundupQuantityString, unitHierarchy };
 }
 
 export const getUnitHierarchyByProduct = async (product_id: string) => {
@@ -85,4 +86,46 @@ export const getUnitHierarchyByProduct = async (product_id: string) => {
         let result: IUnitList[] = await response.json();
         return result
     }
+}
+
+export const getAllUnitHierarchies = async () => {
+    const url = process.env.NEXT_PUBLIC_BACKEND_URL + "unit/getUnitHierarchies";
+    let response = await fetch(url);
+    if (response.ok) {
+        let result: IUnitList[][] = await response.json();
+        return result;
+    }
+}
+
+export const findAndCalculateUnitHierarchy = (hierarchies: IUnitList[][], unit_id: string, qunatityList: any[], per_bag_unit_id: string, per_bag_unit_qunatity: string) => {
+    let unitHierarchy = hierarchies.find(x => x.some(y => y.unit_id == unit_id));
+    if (unitHierarchy) {
+        // let bagUnit = { unit_id: process.env.NEXT_PUBLIC_BAG_UNIT_ID ?? '', unit_name: process.env.NEXT_PUBLIC_BAG_UNIT_NAME ?? '', unit_symbol: process.env.NEXT_PUBLIC_BAG_UNIT_NAME ?? '' }
+        // let bagConnectedUnitIndex = unitHierarchy.findIndex(x => x.unit_id == per_bag_unit_id);
+        // if (bagConnectedUnitIndex >= 0) {
+        //     unitHierarchy[bagConnectedUnitIndex].parent_unit = bagUnit;
+        //     unitHierarchy[bagConnectedUnitIndex].quantity_per_parent_unit = per_bag_unit_qunatity;
+        //     unitHierarchy.splice(0, bagConnectedUnitIndex);
+        //     unitHierarchy.unshift(bagUnit);
+        // }
+        // return calculateQuantityWithHierarchy(unitHierarchy, qunatityList);
+        return bindAndCalculatePerBagUnitHierarchy(unitHierarchy, qunatityList, per_bag_unit_id, per_bag_unit_qunatity);
+    }
+}
+
+export const bindAndCalculatePerBagUnitHierarchy = (unitHierarchy: IUnitList[], qunatityList: any[], per_bag_unit_id: string, per_bag_unit_qunatity: string) => {
+    unitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, per_bag_unit_id, per_bag_unit_qunatity)
+    return calculateQuantityWithHierarchy(unitHierarchy, qunatityList);
+}
+
+export const bindPerBagUnitHierarchy = (unitHierarchy: IUnitList[], per_bag_unit_id: string, per_bag_unit_qunatity: string) => {
+    let bagUnit = { unit_id: process.env.NEXT_PUBLIC_BAG_UNIT_ID ?? '', unit_name: process.env.NEXT_PUBLIC_BAG_UNIT_NAME ?? '', unit_symbol: process.env.NEXT_PUBLIC_BAG_UNIT_NAME ?? '' }
+    let bagConnectedUnitIndex = unitHierarchy.findIndex(x => x.unit_id == per_bag_unit_id);
+    if (bagConnectedUnitIndex >= 0) {
+        unitHierarchy[bagConnectedUnitIndex].parent_unit = bagUnit;
+        unitHierarchy[bagConnectedUnitIndex].quantity_per_parent_unit = per_bag_unit_qunatity;
+        unitHierarchy.splice(0, bagConnectedUnitIndex);
+        unitHierarchy.unshift(bagUnit);
+    }
+    return unitHierarchy;
 }

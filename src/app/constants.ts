@@ -10,5 +10,17 @@ export const TRACK_STATUS_LIST: ISelect[] = [
     {
         label: 'Stored',
         value: '1'
+    },
+    {
+        label: 'Transferred',
+        value: '2'
+    },
+    {
+        label: 'Received',
+        value: '3'
+    },
+    {
+        label: 'Sold',
+        value: '4'
     }
 ]

@@ -1,6 +1,6 @@
 "use client"
 
-import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
+import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, ListAlt as ListAltIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
 import { Box, Collapse, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Typography } from "@mui/material";
 import SidebarButton from "../components/sidebarButton";
 import { FC, useState } from "react";
@@ -54,6 +54,9 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
                         </List>
                         <List component="div" sx={{ pl: 4 }}>
                             <SidebarButton icon={<BusinessCenterIcon />} label="Product" selected={currentRoute.includes('product')} handleClick={() => handleRoute('/dashboard/product')} />
+                        </List>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<ListAltIcon />} label="Stock" selected={currentRoute.includes('stock')} handleClick={() => handleRoute('/dashboard/stock')} />
                         </List>
                     </Collapse>
                     <ListItem>

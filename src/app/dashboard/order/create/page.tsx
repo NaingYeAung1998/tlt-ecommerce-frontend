@@ -28,7 +28,7 @@ function AddOrder() {
     const [order, setOrder] = useState<IOrder>({} as IOrder)
     const [orderItems, setOrderItems] = useState<IOrderItemDisplay[]>([])
     const initItem = (length: number): IOrderItem => {
-        return { item_id: (length + 1).toString(), quantity: 0, unitHierarchy: [], productStocks: [] }
+        return { item_id: (length + 1).toString(), quantity: 0, missing_quantity: 0, unitHierarchy: [], productStocks: [] }
     }
     const initPayment = (length: number): IOrderPayment => {
         return { payment_id: (length + 1).toString(), amount: '0', payment_date: '' }
@@ -43,10 +43,11 @@ function AddOrder() {
     const [payments, setPayments] = useState<any>([])
     const [paymentTotalAmount, setPaymentTotalAmount] = useState("0 MMK")
     const [showError, setShowError] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const totalPrice = useMemo(() => {
         let total: number = 0;
-        orderItems.forEach((item: IOrderItemDisplay) => { total += (item.selling_price ? item.selling_price : 0) })
+        orderItems.forEach((item: IOrderItemDisplay) => { total += (item.selling_price ? parseFloat(item.selling_price.toString()) : 0) })
         return total;
     }, [orderItems])
 
@@ -81,8 +82,9 @@ function AddOrder() {
     }
 
     const handleSave = async () => {
+        setLoading(true);
         const data = { ...order };
-        data.items = orderItems.map((item) => { return { product: item.product, quantity: item.quantity, stock: item.stock, selling_price: item.selling_price, unit: item.unit, productStocks: [], unitHierarchy: [] } })
+        data.items = orderItems.map((item, index) => { return { product: item.product, quantity: item.quantity, missing_quantity: 0, stock: item.stock, selling_price: item.selling_price, unit: item.unit, productStocks: [], unitHierarchy: [], sortOrder: index } })
         data.payments = [];
         if (fullyPaid) {
             data.payments.push({ amount: totalPrice.toString(), payment_date: today.toISOString().split('T')[0], payment_channel: '', note: '' })
@@ -115,6 +117,7 @@ function AddOrder() {
                 router.push("/dashboard/order?showSuccess=true&action=update&customer=" + customer?.label);
             } else {
                 setShowError(true)
+                setLoading(false)
             }
         } else {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "order"
@@ -129,6 +132,7 @@ function AddOrder() {
                 router.push("/dashboard/order?showSuccess=true&action=create&customer=" + customer?.label);
             } else {
                 setShowError(true)
+                setLoading(false)
             }
         }
 
@@ -161,6 +165,7 @@ function AddOrder() {
         const currentItems = [...orderItems];
         const item = currentItems.find(x => x.item_id == id);
         if (item) {
+            console.log(item)
             setItem(item)
         }
     }
@@ -236,9 +241,21 @@ function AddOrder() {
         const url = process.env.NEXT_PUBLIC_BACKEND_URL + "order"
         let response = await fetch(url + "/" + id);
         if (response.ok) {
-            let result: IOrder = await response.json();
+            let result = await response.json();
+            const itemPromises = await result.items.map(async (item: any, index: number) => {
+                item.item_id = item.order_item_id;
+                item.product_name = item.product?.product_name;
+                item.stock_name = item.stock?.supplier?.supplier_name + " (" + item.stock?.supplier?.supplier_phone + ")"
+                let unitQty = await calculateQuantityWithProduct(item.product?.product_id, [{ unit_id: item.unit?.unit_id, quantity: item.quantity }])
+                item.unit_quantity = unitQty?.quantityString
+                item.unitHierarchy = unitQty?.unitHierarchy
+            })
+            await Promise.all(itemPromises);
             setOrder(result);
-            setPayments(result.payments)
+            setOrderItems(result.items)
+            setCustomer({ label: result.customer.customer_name, value: result.customer.customer_id })
+            setOrderDate(result.order_date)
+            // setPayments(result.payments)
 
         }
     }
@@ -367,7 +384,7 @@ function AddOrder() {
                             <TableHead>
                                 <TableRow>
                                     <TableCell style={{ maxWidth: '100px' }}>Product</TableCell>
-                                    <TableCell style={{ maxWidth: '100px' }}>Stock</TableCell>
+                                    {/* <TableCell style={{ maxWidth: '100px' }}>Stock</TableCell> */}
                                     <TableCell style={{ maxWidth: '100px' }}>Quantity</TableCell>
                                     <TableCell style={{ maxWidth: '100px' }}>Price</TableCell>
                                     <TableCell style={{ maxWidth: '100px' }}></TableCell>
@@ -375,8 +392,8 @@ function AddOrder() {
                             </TableHead>
                             <TableBody>
                                 {
-                                    orderItems.map((item: IOrderItemDisplay, index: number) =>
-                                        <OrderItemDisplay item_id={item.item_id} product_name={item.product_name} stock_name={item.stock_name} unit_quantity={item.unit_quantity} selling_price={formatCurrency(item.selling_price ? item.selling_price : 0)} handleEdit={handleEditItem} handleDelete={handleDeleteItem} />
+                                    orderItems.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((item: IOrderItemDisplay, index: number) =>
+                                        <OrderItemDisplay key={item.item_id} item_id={item.item_id} product_name={item.product_name} stock_name={item.stock_name} unit_quantity={item.unit_quantity} selling_price={formatCurrency(item.selling_price ? item.selling_price : 0)} handleEdit={handleEditItem} handleDelete={handleDeleteItem} />
                                     )
                                 }
                                 {
@@ -420,8 +437,8 @@ function AddOrder() {
 
 
             <div className="flex justify-end pt-[20px] gap-4">
-                <Link href={'/dashboard/supplier_voucher'}><Button variant="outlined" color="warning">Cancel</Button></Link>
-                <Button variant="contained" color="primary" onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
+                <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
+                <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
             </div>
 
         </Box>

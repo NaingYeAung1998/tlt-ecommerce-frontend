@@ -17,6 +17,7 @@ import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 import { IOrderList } from './interfaces/order.interface';
+import { formatCurrency } from '@/app/utils';
 
 interface Column {
     id: 'voucher_code' | 'customer_name' | 'total_amount' | 'total_paid' | 'created_on';
@@ -109,6 +110,8 @@ export default function Orders() {
             let result = await response.json();
             result.data.forEach((order: any) => {
                 order.customer_name = order.customer_name ? order.customer_name : order.customer_relation_name
+                order.total_amount = formatCurrency(order.total_amount)
+                order.total_paid = formatCurrency(order.total_paid)
             })
             setRows(result.data);
             setTotalLength(result.totalLength)

@@ -1,6 +1,6 @@
 "use client"
 
-import { Alert, Box, Button, Grid, Modal, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Grid, Modal, Switch, TextField, Typography } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import Select from 'react-select'
 import { ISelect } from "@/app/interfaces";
 import { ICategory } from "../../category/interfaces/category.interface";
 import { IGrade } from "../../grade/interfaces/grade.interface";
-import { IStock } from "../interfaces/stock.interface";
+import { IStock, IStockTrack } from "../interfaces/stock.interface";
 import { IProduct, IProductList } from "../../product/interfaces/product.interface";
 import { ISupplier } from "../../supplier/interfaces/supplier.interface";
 import { IUnit, IUnitList } from "../../unit/interfaces/unit.interface";
@@ -16,6 +16,8 @@ import { IWarehouse } from "../../warehouse/intefaces/warehouse.interfaces";
 import { Delete as DeleteIcon, Edit as EditIcon } from "@mui/icons-material";
 import { calculateLowestUnitQuantity, calculateQuantityWithHierarchy, calculateQuantityWithProduct, calculateRoundUpUnit, getUnitHierarchyByProduct } from "@/app/utils";
 import { Divider } from "@/app/components/divider";
+import { ITrack } from "../interfaces/track.interface";
+import { TRACK_STATUS_LIST } from "@/app/constants";
 
 function AddStock() {
     const searchParams = useSearchParams();
@@ -35,6 +37,7 @@ function AddStock() {
     const [roundupQuantity, setRoundupQuantity] = useState("");
     const [editQuantityModalOpen, setEditQuantityModalOpen] = useState(false);
     const [warehouse, setWarehouse] = useState<ISelect | null>(null);
+    const [fullyStored, setFullyStored] = useState(true);
     const [showError, setShowError] = useState(false);
     const product_id = searchParams.get('product_id');
 
@@ -50,6 +53,18 @@ function AddStock() {
         let wholesaleLowestUnitQty = calculateLowestUnitQuantity(unitHierarchy, [{ unit_id: wholesaleUnit?.value, unit_name: wholesaleUnit?.label, quantity: data.wholesale_starting_quantity }]);
         data.wholesale_starting_quantity = wholesaleLowestUnitQty.quantity?.toString();
         data.wholesale_starting_unit = { unit_id: wholesaleLowestUnitQty.unit_id };
+        if (fullyStored) {
+            data.stock_tracks = [];
+            const today = new Date();
+            let track: IStockTrack = {
+                checked_date: today.toISOString().split('T')[0],
+                quantity: data.quantity,
+                unit: data.unit,
+                status: TRACK_STATUS_LIST.find(x => x.label == 'Stored')?.value || '',
+                warehouse: data.warehouse,
+            }
+            data.stock_tracks.push(track);
+        }
         console.log(data)
 
         if (id) {
@@ -62,7 +77,7 @@ function AddStock() {
                 body: JSON.stringify(data)
             })
             if (response.ok) {
-                router.push("/dashboard/stock?showSuccess=true&action=update&stock=" + product?.label + "&product_id=" + product_id);
+                router.push("/dashboard/stock?showSuccess=true&action=update&stock=" + product?.label + (product_id != null && product_id != "null" ? ("&product_id=" + product_id) : ""));
             } else {
                 setShowError(true)
             }
@@ -76,7 +91,7 @@ function AddStock() {
                 body: JSON.stringify(data)
             })
             if (response.ok) {
-                router.push("/dashboard/stock?showSuccess=true&action=create&stock=" + product?.label + "&product_id=" + product_id);
+                router.push("/dashboard/stock?showSuccess=true&action=create&stock=" + product?.label + (product_id != null && product_id != "null" ? ("&product_id=" + product_id) : ""));
             } else {
                 setShowError(true)
             }
@@ -132,7 +147,7 @@ function AddStock() {
     //     }
     // }
 
-    const getProductUnitHierarchy = async () => {
+    const getProductUnitHierarchy = async (product_id: string) => {
         const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product/getProductUnitHierarchy/" + product_id
         let response = await fetch(url);
         if (response.ok) {
@@ -174,7 +189,6 @@ function AddStock() {
             if (unitHierarchy) {
                 let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: result.stock_unit_id, unit_name: result.stock_unit, quantity: result.quantity }]);
                 setRoundupQuantity(formattedQuantity.quantityString);
-                console.log(formattedQuantity)
                 let qtyList: any[] = [];
                 formattedQuantity.quantityList?.forEach((qty, index) => {
                     qtyList.push({ id: (index + 1).toString(), quantity: qty.quantity, unit_id: qty.unit_id, unit_name: qty.unit_name, unit: { value: qty.unit_id, label: qty.unit_name } })
@@ -259,7 +273,7 @@ function AddStock() {
     useEffect(() => {
         getProductList();
         getSupplierList();
-        getProductUnitHierarchy();
+        getProductUnitHierarchy(product_id ?? '');
         getWarehouseList();
 
         if (id) {
@@ -283,7 +297,7 @@ function AddStock() {
                                 menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
                             }}
                                 value={product}
-                                onChange={(option) => setProduct(option)}
+                                onChange={(option) => { setProduct(option); getProductUnitHierarchy(option?.value ?? ''); setQuantityList([]); setRoundupQuantity(""); }}
                             />
                         </div>
                     </Grid>
@@ -337,6 +351,12 @@ function AddStock() {
                     <Grid size={{ xs: 12, sm: 6 }}>
                         <div className="pt-[20px]">
                             <TextField InputLabelProps={{ shrink: !!stock.note }} value={stock.note} onChange={(e) => { handleInputChange("note", e.target.value) }} variant="outlined" label="Note" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
+                        </div>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <div className="flex gap-3 items-center pt-[20px]">
+                            <Switch defaultChecked={fullyStored} value={fullyStored} onChange={() => setFullyStored(prev => !prev)} />
+                            <Typography variant="body1" fontWeight={''}>Fully Stored</Typography>
                         </div>
                     </Grid>
                 </Grid>

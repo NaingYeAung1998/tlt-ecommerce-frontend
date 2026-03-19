@@ -13,18 +13,27 @@ interface AdminLayoutProps {
 function AdminLayout({ children }: AdminLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     return (
-        <Grid container spacing={2}>
-            {/* <Grid size={{ xs: 0, lg: 2 }} display={{ xs: 'none', lg: 'block' }}>
+        <>
+            <div className="h-[100vh] bg-[#F2F2F2]">
+                <IconButton onClick={() => setSidebarOpen(true)} sx={{ display: { xs: 'block', lg: 'block' } }}> <MenuIcon /></IconButton>
+
+                {/* <Grid size={{ xs: 0, lg: 2 }} display={{ xs: 'none', lg: 'block' }}>
                 <Sidebar handleSidebarClose={() => setSidebarOpen(false)}></Sidebar>
             </Grid> */}
-            <Grid size={{ xs: 12, lg: 12 }} sx={{ backgroundColor: '#F2F2F2', height: '100vh', padding: 3 }}>
-                <IconButton onClick={() => setSidebarOpen(true)} sx={{ display: { xs: 'block', lg: 'block' }, position: 'fixed', top: 20, left: 30 }}> <MenuIcon /></IconButton>
-                <Modal open={sidebarOpen} onClose={() => setSidebarOpen(false)} sx={{ display: { xs: 'block', lg: 'block' } }}>
-                    <Sidebar handleSidebarClose={() => setSidebarOpen(false)}></Sidebar>
-                </Modal>
-                {children}
-            </Grid>
-        </Grid>
+
+                {/* <Grid size={{ xs: 12, lg: 12 }} sx={{ backgroundColor: '#F2F2F2', height: '100vh', padding: 3 }}> */}
+                <div className="h-[85vh]">
+                    <Modal open={sidebarOpen} onClose={() => setSidebarOpen(false)} sx={{ display: { xs: 'block', lg: 'block' } }}>
+                        <Sidebar handleSidebarClose={() => setSidebarOpen(false)}></Sidebar>
+                    </Modal>
+                    {children}
+                </div>
+
+            </div>
+
+            {/* </Grid> */}
+        </>
+
     )
 }
 

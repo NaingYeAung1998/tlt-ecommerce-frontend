@@ -10,6 +10,11 @@ export interface IProductList {
     product_quantity_per_bag: string;
     product_per_bag_qty: number,
     product_per_bag_unit_id: string,
+    selling_price: string,
+    fix_price: string
+    wholesale_selling_price: string,
+    wholesale_fix_price: string,
+    wholesale_starting_quantity: string,
     created_on: string;
 }
 
@@ -22,6 +27,12 @@ export interface IProduct {
     grade?: IGradeRelation;
     quantity_per_bag: number;
     per_bag_unit?: IUnitRelation;
+    selling_price: string,
+    fix_price: string
+    wholesale_selling_price: string,
+    wholesale_fix_price: string,
+    wholesale_starting_quantity: string,
+    wholesale_starting_unit: IUnitRelation;
 }
 
 // export interface IProductCategory {

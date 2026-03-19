@@ -29,10 +29,12 @@ export interface IOrderItem {
     product?: IProductRelation
     stock?: IStockRelation,
     quantity: number,
+    missing_quantity: number,
     selling_price?: number,
     unit?: IUnitRelation,
     unitHierarchy: IUnitList[],
-    productStocks: IStockList[]
+    productStocks: IStockList[],
+    sortOrder?: number
 }
 
 export interface IOrderItemDisplay extends IOrderItem {
