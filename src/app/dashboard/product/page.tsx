@@ -17,9 +17,10 @@ import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IProductList } from './interfaces/product.interface';
 import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
+import { bindPerBagUnitHierarchy, calculateQuantityWithHierarchy, getAllUnitHierarchies } from '@/app/utils';
 
 interface Column {
-    id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'product_quantity_per_bag' | 'product_description' | 'created_on';
+    id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'product_quantity_per_bag' | 'missing_quantity' | 'product_description' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -44,6 +45,13 @@ const columns: readonly Column[] = [
     {
         id: 'product_quantity_per_bag',
         label: 'Qty Per Bag',
+        minWidth: 170,
+        align: 'left',
+
+    },
+    {
+        id: 'missing_quantity',
+        label: 'Missing Quantity',
         minWidth: 170,
         align: 'left',
 
@@ -121,6 +129,19 @@ export default function Products() {
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
+            if (result.data && result.totalLength > 0) {
+                const unitHierarchies = await getAllUnitHierarchies();
+                result.data.map((product: IProductList) => {
+                    const unitHierarchy = unitHierarchies?.find(x => x.some(y => y.unit_id == product.product_per_bag_unit_id))
+                    if (unitHierarchy) {
+                        const perBagUnitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, product.product_per_bag_unit_id, product.product_per_bag_qty);
+                        let formattedQuantity = calculateQuantityWithHierarchy(perBagUnitHierarchy, [{ unit_id: product.lowest_unit_id, quantity: product.missing_quantity }])
+                        product.missing_quantity = formattedQuantity.quantityString
+                    }
+                })
+            }
+
+
             setRows(result.data);
             setTotalLength(result.totalLength)
         } else {

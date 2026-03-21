@@ -16,7 +16,7 @@ import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import { IStockList } from './interfaces/stock.interface';
-import { calculateQuantityWithHierarchy, findAndCalculateUnitHierarchy, formatCurrency, getAllUnitHierarchies, getUnitHierarchyByProduct } from '@/app/utils';
+import { bindPerBagUnitHierarchy, calculateQuantityWithHierarchy, findAndCalculateUnitHierarchy, formatCurrency, getAllUnitHierarchies, getUnitHierarchyByProduct } from '@/app/utils';
 import { ITrackInfo } from './interfaces/track.interface';
 import { IUnitList } from '../unit/interfaces/unit.interface';
 
@@ -130,7 +130,11 @@ export default function Stocks() {
                 let result = await response.json();
                 result.data.map((stock: ITrackInfo) => {
                     const unitHierarchy = unitHierarchies?.find(x => x.some(y => y.unit_id == stock.stock_unit_id))
-                    stock = formatStockData(stock, unitHierarchy)
+                    if (unitHierarchy) {
+                        const perBagUnitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, stock.stock_product_per_bag_unit_id, stock.stock_product_per_bag_quantity);
+                        stock = formatStockData(stock, unitHierarchy)
+                    }
+
                 })
                 setRows(result.data);
                 setTotalLength(result.totalLength)

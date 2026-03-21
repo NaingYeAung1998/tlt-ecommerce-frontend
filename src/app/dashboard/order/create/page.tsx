@@ -2,14 +2,14 @@
 
 import { Alert, Box, Button, Grid, IconButton, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Ref, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Select from 'react-select'
 import { ISupplier } from "../../supplier/interfaces/supplier.interface";
 import { ISelect } from "@/app/interfaces";
 import { IStockList } from "../../stock/interfaces/stock.interface";
 import { Add as AddIcon, Delete as DeleteIcon, PlusOne } from "@mui/icons-material";
-import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency } from "@/app/utils";
+import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, handleNextFocus } from "@/app/utils";
 import { IUnitList } from "../../unit/interfaces/unit.interface";
 import { IOrder, IOrderItem, IOrderItemDisplay, IOrderPayment } from "../interfaces/order.interface";
 import { ICustomer } from "../../customer/interfaces/customer.interface";
@@ -44,6 +44,12 @@ function AddOrder() {
     const [paymentTotalAmount, setPaymentTotalAmount] = useState("0 MMK")
     const [showError, setShowError] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    //input refs
+    const customerRef = useRef<any>(null);
+    const addressRef = useRef<HTMLInputElement>(null);
+    const itemRef = useRef<HTMLInputElement>(null);
+    const addRef = useRef<HTMLButtonElement>(null);
 
     const totalPrice = useMemo(() => {
         let total: number = 0;
@@ -154,7 +160,9 @@ function AddOrder() {
             setOrderItems(currentOrderItems);
             setItem(initItem(currentOrderItems.length))
         }
-
+        if (itemRef && itemRef.current) {
+            itemRef.current.focus()
+        }
     }
 
     const handleUpdateItem = (item: IOrderItem) => {
@@ -200,6 +208,9 @@ function AddOrder() {
 
 
     useEffect(() => {
+        if (customerRef && customerRef.current) {
+            customerRef.current.focus();
+        }
     }, [])
 
 
@@ -292,6 +303,8 @@ function AddOrder() {
                                     isMulti={false}
                                     value={customer}
                                     onChange={(option) => { setCustomer(option) }}
+                                    onKeyDown={(e) => { handleNextFocus(e, addressRef) }}
+                                    ref={customerRef}
                                 />
                             </div>
                         </Grid>
@@ -305,7 +318,7 @@ function AddOrder() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <div className="pt-[20px]">
-                                <TextField type="text" InputLabelProps={{ shrink: !!order.address }} value={order.address} variant="outlined" label="Address" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} onChange={(e) => handleAddressChange(e.target.value)} />
+                                <TextField inputRef={addressRef} type="text" InputLabelProps={{ shrink: !!order.address }} value={order.address} variant="outlined" label="Address" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} onChange={(e) => handleAddressChange(e.target.value)} onKeyDown={(e) => { handleNextFocus(e, itemRef) }} />
                             </div>
                         </Grid>
 
@@ -314,10 +327,10 @@ function AddOrder() {
                     <Divider />
                     <div className="pt-[20px]">
                         <Typography variant="body1" fontWeight={'bold'}>Item</Typography>
-                        <OrderItem item={item} products={products} updateItem={handleUpdateItem} />
+                        <OrderItem item={item} products={products} updateItem={handleUpdateItem} itemRef={itemRef} nextRef={addRef} />
                         <div className="flex justify-start pt-[20px] gap-4">
                             {orderItems.map((item) => item.item_id).includes(item.item_id) ? <Button variant="outlined" color="warning" onClick={() => setItem(initItem(orderItems.length))}>Cancel</Button> : <></>}
-                            <Button variant="contained" color="primary" onClick={() => handleAddOrUpdateItem()}>{orderItems.map((item) => item.item_id).includes(item.item_id) ? 'Update' : 'Add'}</Button>
+                            <Button ref={addRef} variant="contained" color="primary" onClick={() => handleAddOrUpdateItem()}>{orderItems.map((item) => item.item_id).includes(item.item_id) ? 'Update' : 'Add'}</Button>
                         </div>
                     </div>
                     <div className="pt-[40px]"><label className="text-[16px] font-bold">Payments</label></div>

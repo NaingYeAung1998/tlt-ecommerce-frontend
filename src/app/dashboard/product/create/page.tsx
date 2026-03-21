@@ -36,16 +36,17 @@ function AddProduct() {
 
     const handlePerBagUnitChange = async (unit: ISelect | null, quantity_per_bag: string) => {
         setPerBagUnit(unit)
-        if (unit) {
-            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "unit/findUnitHierarchy/" + unit.value
-            let response = await fetch(url);
-            if (response.ok) {
-                const result = await response.json()
-                const perBagUnitHierarchy = bindPerBagUnitHierarchy(result, unit?.value || '', quantity_per_bag)
-                setUnitHierarchy(perBagUnitHierarchy)
-                return perBagUnitHierarchy;
-            }
-        }
+        return await calculateUnitHierarchy(unit, quantity_per_bag);
+        // if (unit) {
+        //     const url = process.env.NEXT_PUBLIC_BACKEND_URL + "unit/findUnitHierarchy/" + unit.value
+        //     let response = await fetch(url);
+        //     if (response.ok) {
+        //         const result = await response.json()
+        //         const perBagUnitHierarchy = bindPerBagUnitHierarchy(result, unit?.value || '', quantity_per_bag)
+        //         setUnitHierarchy(perBagUnitHierarchy)
+        //         return perBagUnitHierarchy;
+        //     }
+        // }
     }
 
     const handleSave = async () => {
@@ -165,6 +166,19 @@ function AddProduct() {
         }
     }
 
+    const calculateUnitHierarchy = async (unit: ISelect | null, quantity_per_bag: string) => {
+        if (unit && quantity_per_bag) {
+            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "unit/findUnitHierarchy/" + unit.value
+            let response = await fetch(url);
+            if (response.ok) {
+                const result = await response.json()
+                const perBagUnitHierarchy = bindPerBagUnitHierarchy(result, unit?.value || '', quantity_per_bag)
+                setUnitHierarchy(perBagUnitHierarchy)
+                return perBagUnitHierarchy;
+            }
+        }
+    }
+
     useEffect(() => {
         getCategoryList();
         getGradeList();
@@ -174,6 +188,10 @@ function AddProduct() {
             getExistingProduct(id);
         }
     }, [])
+
+    useEffect(() => {
+        calculateUnitHierarchy(perBagUnit, product?.quantity_per_bag?.toString() || '')
+    }, [perBagUnit, product.quantity_per_bag])
 
     return (
         <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px' }}>
@@ -245,7 +263,7 @@ function AddProduct() {
                                 menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
                             }}
                                 value={perBagUnit}
-                                onChange={(option) => handlePerBagUnitChange(option, product.quantity_per_bag.toString())}
+                                onChange={(option) => handlePerBagUnitChange(option, product.quantity_per_bag?.toString() || '')}
                             />
                         </div>
                     </Grid>

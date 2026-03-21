@@ -100,7 +100,7 @@ function AddStock() {
     }
 
     const getProductList = async () => {
-        const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product?perPage=-1"
+        const url = process.env.NEXT_PUBLIC_BACKEND_URL + "product?search=&perPage=-1"
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
@@ -363,7 +363,7 @@ function AddStock() {
             </div>
 
 
-            <Divider />
+            {/* <Divider />
 
             <div className="pt-[40px] pb-[40px]">
                 <Typography variant="body1" fontWeight={'bold'}>Retail Price</Typography>
@@ -415,7 +415,7 @@ function AddStock() {
                         </div>
                     </Grid>
                 </Grid>
-            </div>
+            </div> */}
 
 
             <div className="flex justify-end pt-[20px] gap-4">

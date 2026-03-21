@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react"
+import { FC, useEffect, useRef, useState } from "react"
 import { ISelect } from "../interfaces"
 import { IUnitList } from "../dashboard/unit/interfaces/unit.interface"
 import { IOrderItem, IOrderItemDisplay } from "../dashboard/order/interfaces/order.interface"
@@ -8,21 +8,24 @@ import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Label } from "@
 import Select from 'react-select'
 import { IProductList } from "../dashboard/product/interfaces/product.interface"
 import QuantityCalculator from "./quantityCalculator"
-import { calculateLowestUnitQuantity, calculateRoundUpUnit } from "../utils"
+import { calculateLowestUnitQuantity, calculateRoundUpUnit, handleNextFocus } from "../utils"
 
 type OrderItemProps = {
     products: IProductList[],
     item: IOrderItem,
     updateItem: (item: IOrderItemDisplay) => void,
+    itemRef: React.RefObject<any>,
+    nextRef?: React.RefObject<any>
 }
 
 
-const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
+const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, nextRef }) => {
 
     const [unitHierarchy, setUnitHierarchy] = useState<IUnitList[]>([])
     const [productStocks, setProductStocks] = useState<IStockList[]>([])
     const [fixedPrice, setFixedPrice] = useState(0);
-
+    const qtyRef = useRef<any>(null);
+    const priceRef = useRef<any>(null);
 
     const getProductUnitHierarchy = async (product_id: string) => {
         if (product_id) {
@@ -119,6 +122,15 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
         let prevItem = { ...item }
         prevItem.selling_price = parseFloat(value);
         updateItem(prevItem)
+
+    }
+
+    const handlePriceFocus = () => {
+        setTimeout(() => {
+            if (priceRef.current) {
+                priceRef.current.focus();
+            }
+        }, 50);
     }
 
     useEffect(() => {
@@ -151,6 +163,8 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
                 }}
                     value={productOption}
                     onChange={(option) => handleProductChange(option)}
+                    ref={itemRef}
+                    onKeyDown={(e) => handleNextFocus(e, qtyRef)}
                 />
             </Grid>
             {/* <Grid size={{ sm: 12, md: 6 }}>
@@ -164,10 +178,10 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem }) => {
                 />
             </Grid> */}
             <Grid size={{ sm: 12, md: 6 }}>
-                <QuantityCalculator unitHierarchy={item.unitHierarchy.length > 0 ? item.unitHierarchy : unitHierarchy} parentId={item.item_id ? item.item_id : ''} parentQty={item.quantity} parentUnitId={item.unit ? item.unit.unit_id : ''} updateParent={handleQuantityChange} />
+                <QuantityCalculator qtyRef={qtyRef} nextFocus={() => handlePriceFocus()} unitHierarchy={item.unitHierarchy.length > 0 ? item.unitHierarchy : unitHierarchy} parentId={item.item_id ? item.item_id : ''} parentQty={item.quantity} parentUnitId={item.unit ? item.unit.unit_id : ''} updateParent={handleQuantityChange} />
             </Grid>
             <Grid size={{ sm: 12, md: 6 }}>
-                <TextField InputLabelProps={{ shrink: true }} label={"Fixed Price:" + fixedPrice} type="number" value={item.selling_price} onChange={(e) => { handlePriceChange(e.target.value) }} sx={{ zIndex: 0 }} />
+                <TextField inputRef={priceRef} InputLabelProps={{ shrink: true }} label={"Fixed Price:" + fixedPrice} type="number" value={item.selling_price} onChange={(e) => { handlePriceChange(e.target.value) }} onKeyDown={(e) => { if (nextRef) { e.preventDefault(); handleNextFocus(e, nextRef) } }} sx={{ zIndex: 0 }} />
             </Grid>
         </Grid>
     )

@@ -11,9 +11,11 @@ type QuantiyCalculatorProps = {
     parentQty: number,
     parentUnitId: string,
     updateParent: (qty: number, unitId: string) => void,
+    qtyRef?: React.RefObject<any>,
+    nextFocus?: () => void
 }
 
-const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentId, parentQty, parentUnitId, updateParent }) => {
+const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentId, parentQty, parentUnitId, updateParent, qtyRef, nextFocus }) => {
 
     const [quantityList, setQuantityList] = useState<any[]>([]);
     const [editQuantityModalOpen, setEditQuantityModalOpen] = useState(false);
@@ -91,6 +93,10 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
     const handleSaveEditQuantityModal = () => {
         calculateQuantity(false)
         setEditQuantityModalOpen(false);
+        if (nextFocus) {
+            nextFocus()
+        }
+
     }
 
     const unitList = useMemo(() => unitHierarchy.map((unit) => { return { label: unit.unit_name, value: unit.unit_id } }), [unitHierarchy])
@@ -99,7 +105,7 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
         <>
             <div className="flex gap-3">
                 <TextField type="text" InputLabelProps={{ shrink: !!roundupQuantityString }} value={roundupQuantityString} variant="outlined" label="Quantity" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
-                <Button variant="outlined" onClick={() => setEditQuantityModalOpen(true)}><EditIcon /></Button>
+                <Button ref={qtyRef} variant="outlined" onClick={() => setEditQuantityModalOpen(true)}><EditIcon /></Button>
             </div>
 
             <Modal open={editQuantityModalOpen} onClose={handleEditQuantityModalClose}>

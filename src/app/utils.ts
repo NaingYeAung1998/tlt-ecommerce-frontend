@@ -129,3 +129,11 @@ export const bindPerBagUnitHierarchy = (unitHierarchy: IUnitList[], per_bag_unit
     }
     return unitHierarchy;
 }
+
+export const handleNextFocus = (e: any, nextRef: React.RefObject<HTMLInputElement | null>) => {
+    if (e.key === 'Enter') {
+        if (nextRef && nextRef.current) {
+            nextRef.current.focus();
+        }
+    }
+}
