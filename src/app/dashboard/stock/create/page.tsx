@@ -2,7 +2,7 @@
 
 import { Alert, Box, Button, Grid, Modal, Switch, TextField, Typography } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Select from 'react-select'
 import { ISelect } from "@/app/interfaces";
@@ -36,10 +36,12 @@ function AddStock() {
     const [quantityList, setQuantityList] = useState<any>([]);
     const [roundupQuantity, setRoundupQuantity] = useState("");
     const [editQuantityModalOpen, setEditQuantityModalOpen] = useState(false);
+    const [perBagLowestQty, setPerBagLowestQty] = useState(0);
     const [warehouse, setWarehouse] = useState<ISelect | null>(null);
     const [fullyStored, setFullyStored] = useState(true);
     const [showError, setShowError] = useState(false);
     const product_id = searchParams.get('product_id');
+    const qtyInputRef = useRef<any[]>([]);
 
     const handleInputChange = (field: 'buying_price' | 'selling_price' | 'wholesale_selling_price' | 'wholesale_fix_price' | 'wholesale_starting_quantity' | 'fix_price' | 'note', value: string) => {
         setStock({ ...stock, [field]: value })
@@ -50,9 +52,10 @@ function AddStock() {
         data.product = { product_id: product ? product.value : '' };
         data.supplier = { supplier_id: supplier ? supplier.value : '' };
         data.warehouse = { warehouse_id: warehouse ? warehouse.value : '' }
-        let wholesaleLowestUnitQty = calculateLowestUnitQuantity(unitHierarchy, [{ unit_id: wholesaleUnit?.value, unit_name: wholesaleUnit?.label, quantity: data.wholesale_starting_quantity }]);
-        data.wholesale_starting_quantity = wholesaleLowestUnitQty.quantity?.toString();
-        data.wholesale_starting_unit = { unit_id: wholesaleLowestUnitQty.unit_id };
+        if (perBagLowestQty != 0) {
+            data.buying_price_lowest_unit = (parseFloat(data.buying_price) / perBagLowestQty).toString();
+        }
+
         if (fullyStored) {
             data.stock_tracks = [];
             const today = new Date();
@@ -106,7 +109,7 @@ function AddStock() {
             let result = await response.json();
             let options: ISelect[] = [];
             result.forEach((product: IProductList, index: number) => {
-                let option: ISelect = { value: product.product_id, label: product.product_name + " (" + product.product_code + ")" }
+                let option: ISelect = { value: product.product_id, label: product.product_name + " (" + product.product_grade + ")" }
                 options.push(option);
             })
             setProductList(options);
@@ -159,6 +162,8 @@ function AddStock() {
                 options.push(option);
             })
             setUnitList(options);
+            let lowestQty = calculateLowestUnitQuantity(result, [{ unit_id: result[0].unit_id, unit_name: result[0].unit_name, quantity: 1 }])
+            setPerBagLowestQty(lowestQty.quantity)
         }
     }
 
@@ -182,25 +187,18 @@ function AddStock() {
         if (response.ok) {
             let result = await response.json();
 
-            setProduct({ value: result.stock_product_id, label: result.stock_product });
-            setSupplier({ value: result.stock_supplier_id, label: result.stock_supplier });
-            setWarehouse({ value: result.stock_warehouse_id, label: result.stock_warehouse })
+            setProduct({ value: result.product?.product_id, label: result.product?.product_name + " (" + result.product?.grade?.grade_name + ")" });
+            setSupplier({ value: result.supplier?.supplier_id, label: result.supplier?.supplier_name });
+            setWarehouse({ value: result.warehouse?.warehouse_id, label: result.warehouse?.warehouse_name })
             const unitHierarchy = await getUnitHierarchyByProduct(product_id ?? '');
             if (unitHierarchy) {
-                let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: result.stock_unit_id, unit_name: result.stock_unit, quantity: result.quantity }]);
+                let formattedQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: result.unit?.unit_id, unit_name: result.unit?.unit_name, quantity: result.quantity }]);
                 setRoundupQuantity(formattedQuantity.quantityString);
                 let qtyList: any[] = [];
                 formattedQuantity.quantityList?.forEach((qty, index) => {
                     qtyList.push({ id: (index + 1).toString(), quantity: qty.quantity, unit_id: qty.unit_id, unit_name: qty.unit_name, unit: { value: qty.unit_id, label: qty.unit_name } })
                 })
                 setQuantityList(qtyList)
-
-                let formmatedWholesaleStartingQuantity = calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: result.wholesale_strating_unit_id, unit_name: result.wholesale_strating_unit, quantity: result.wholesale_starting_quantity }]);
-                // wholesale quantity list should always return only one value
-                if (formmatedWholesaleStartingQuantity.quantityList[0]) {
-                    setWholesaleUnit({ label: formmatedWholesaleStartingQuantity.quantityList[0].unit_name, value: formmatedWholesaleStartingQuantity.quantityList[0].unit_id })
-                    result.wholesale_starting_quantity = formmatedWholesaleStartingQuantity.quantityList[0].quantity;
-                }
             }
 
 
@@ -258,7 +256,12 @@ function AddStock() {
         let qtyList = [...quantityList];
         qtyList.push({ id: (qtyList.length + 1).toString(), quantity: 0, option: null });
         setQuantityList(qtyList)
-        console.log(qtyList)
+        setTimeout(() => {
+            if (qtyInputRef && qtyInputRef.current[qtyList.length - 1]) {
+                qtyInputRef.current[qtyList.length - 1].focus();
+                qtyInputRef.current[qtyList.length - 1].select();
+            }
+        }, 50)
     }
 
     const handleDeleteQuantity = (id: string) => {
@@ -437,7 +440,7 @@ function AddStock() {
                             quantityList.map((qty: any, index: number) =>
                                 <div className="md:flex gap-4 pb-[30px]" key={index}>
                                     <div className="md:w-[40%]">
-                                        <TextField type="number" value={qty.quantity} label="Quantity" onChange={(e) => handleQuantityChange(e.target.value, qty.id)} />
+                                        <TextField type="number" inputRef={(ref) => qtyInputRef.current[index] = ref} value={qty.quantity} label="Quantity" onChange={(e) => handleQuantityChange(e.target.value, qty.id)} />
                                     </div>
                                     <div className="md:w-[45%]">
                                         <Select options={unitList} placeholder='Units' styles={{

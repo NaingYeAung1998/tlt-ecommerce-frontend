@@ -17,6 +17,7 @@ import moment from 'moment';
 import { MOMENT_FORMAT } from '@/app/constants';
 import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
 import { ISupplierVoucherList } from './interfaces/supplier_voucher.interface';
+import { formatCurrency } from '@/app/utils';
 
 interface Column {
     id: 'voucher_code' | 'supplier' | 'total_amount' | 'total_paid' | 'created_on';
@@ -107,6 +108,10 @@ export default function SupplierVouchers() {
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
+            result.data.map((voucher: ISupplierVoucherList) => {
+                voucher.total_amount = formatCurrency(parseFloat(voucher.total_amount))
+                voucher.total_paid = formatCurrency(parseFloat(voucher.total_paid))
+            })
             setRows(result.data);
             setTotalLength(result.totalLength)
         } else {

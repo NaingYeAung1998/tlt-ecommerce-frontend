@@ -101,7 +101,8 @@ function AddSupplierVoucher() {
             const currentStock = currentStocks.find((x: any) => x.stock_id == stock_id)
             if (currentStock) {
                 const formattedQunatity = await calculateQuantityWithProduct(stock.stock_product_id, [{ unit_id: stock.stock_unit_id, unit_name: stock.stock_unit, quantity: stock.quantity }])
-                stock.quantity = formattedQunatity?.quantityString;
+                stock.quantityString = formattedQunatity?.quantityString;
+                stock.buying_price_formatted = formatCurrency(stock.buying_price)
                 const index = currentStocks.indexOf(currentStock);
                 currentStocks[index] = stock;
                 currentStocks[index].option = { value: stock.stock_id, label: `${stock.stock_code} (${stock.stock_product})` }
@@ -115,16 +116,23 @@ function AddSupplierVoucher() {
     }
 
     const calculateStocks = () => {
+        console.log(selectedStocks)
         const currentStocks = [...selectedStocks];
         let totalAmount = 0;
         currentStocks.forEach((stock, index) => {
-            totalAmount += parseFloat(stock.buying_price ? stock.buying_price : "0");
+            totalAmount += parseFloat(stock.buying_price_lowest_unit ? (stock.buying_price_lowest_unit * stock.quantity).toString() : "0");
         })
         setStockTotalAmount(formatCurrency(totalAmount));
     }
 
     const filterStockList = () => {
-        setStockList(prev => prev.filter(x => { return selectedStocks.every((y: any) => y.stock_id != x.value) }))
+        let stockUnSelected = stocks.filter((x: any) => { return selectedStocks.every((y: any) => y.stock_id != x.stock_id) })
+        let options: ISelect[] = [];
+        stockUnSelected.forEach((stock: IStockList, index: number) => {
+            let option: ISelect = { value: stock.stock_id, label: `${stock.stock_code} (${stock.stock_product})` }
+            options.push(option);
+        })
+        setStockList(options);
     }
 
     useEffect(() => {
@@ -155,6 +163,7 @@ function AddSupplierVoucher() {
     }
 
     const calculatePayments = () => {
+        console.log(payments)
         const currentPayments = [...payments];
         let totalAmount = 0;
         currentPayments.forEach((payment, index) => {
@@ -198,17 +207,18 @@ function AddSupplierVoucher() {
         if (response.ok) {
             let result = await response.json();
             console.log(result)
-            let currentStocks: any = [];
-            result.stocks.forEach(async (stock: any) => {
+            let currentStocks: any[] = [];
+            const stockPromises = result.stocks.map(async (stock: any) => {
                 if (stock.stock) {
                     const formattedQunatity = await calculateQuantityWithProduct(stock.stock.product?.product_id, [{ unit_id: stock.stock.unit?.unit_id, unit_name: stock.stock.unit?.unit_name, quantity: stock.stock.quantity }])
-                    stock.stock.quantity = formattedQunatity?.quantityString;
+                    stock.stock.quantityString = formattedQunatity?.quantityString;
                     stock.stock.option = { value: stock.stock.stock_id, label: `${stock.stock.stock_code} (${stock.stock.product?.product_name}(${stock.stock.product?.product_code}))` }
                     stock.stock.buying_price_formatted = formatCurrency(stock.stock.buying_price)
                     stock.stock.stock_unit = stock.stock.unit?.unit_name;
                 }
                 currentStocks.push(stock.stock)
             })
+            await Promise.all(stockPromises);
             let supplier = result.supplier;
             setSupplier({ value: supplier.supplier_id, label: `${supplier.supplier_name} (${supplier.supplier_phone}) (${supplier.note})` })
             setSelectedStocks(currentStocks)
@@ -220,7 +230,6 @@ function AddSupplierVoucher() {
     useEffect(() => {
         getSupplierList()
         if (id) {
-
             getExistingSupplierVoucher(id);
         }
     }, [])
@@ -260,7 +269,7 @@ function AddSupplierVoucher() {
                         <TableBody>
                             {
                                 selectedStocks.map((stock: any, index: number) =>
-                                    <TableRow key={index}>
+                                    <TableRow key={stock.stock_id}>
                                         <TableCell style={{ width: '400px' }}>
                                             <Select options={stockList} placeholder='Stocks' styles={{
                                                 control: (styles) => ({ ...styles, width: '100%', height: '60px' }),
@@ -272,7 +281,7 @@ function AddSupplierVoucher() {
                                             />
                                         </TableCell>
                                         <TableCell style={{ width: '400px' }}>{stock.buying_price_formatted}</TableCell>
-                                        <TableCell style={{ width: '400px' }}>{`${stock.quantity ? stock.quantity : ""}`}</TableCell>
+                                        <TableCell style={{ width: '400px' }}>{`${stock.quantityString ? stock.quantityString : ""}`}</TableCell>
                                         <TableCell align="right"><Button variant="outlined" color="warning" onClick={() => handleStockDelete(stock.stock_id)}><DeleteIcon /></Button></TableCell>
                                     </TableRow>
                                 )

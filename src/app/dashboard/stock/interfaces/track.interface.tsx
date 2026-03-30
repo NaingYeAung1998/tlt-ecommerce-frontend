@@ -27,6 +27,19 @@ export interface ITrackList extends ITrack {
     warehouse_name: string
 }
 
+export interface ITransferTrack {
+    track_id: string;
+    stock: IStockRelation;
+    fromWarehouse: IWarehouseRelation;
+    toWarehouse: IWarehouseRelation;
+    quantity: string;
+    unit: IUnitRelation
+    transfer_date: string;
+    status: string;
+    note?: string;
+    created_on: string;
+}
+
 export type StockTrackProps = {
     stock_id: string
     product_id: string

@@ -11,11 +11,11 @@ import TableRow from '@mui/material/TableRow';
 import { Alert, Box, Button, Grid, IconButton, Input, InputAdornment, Modal, TextField, Typography } from '@mui/material';
 import { Delete, Edit, Search as SearchIcon } from '@mui/icons-material';
 import { useSearchParams } from 'next/navigation';
-import { FC, KeyboardEvent, useEffect, useState } from 'react';
+import { FC, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import moment from 'moment';
 import { MOMENT_FORMAT, TRACK_STATUS_LIST } from '@/app/constants';
-import { AddTrackProps, ITrack, ITrackInfo, ITrackList, StockTrackProps } from '../interfaces/track.interface';
+import { AddTrackProps, ITrack, ITrackInfo, ITrackList, ITransferTrack, StockTrackProps } from '../interfaces/track.interface';
 import Select from 'react-select'
 import { IQunatityCalculatorParent, ISelect } from '@/app/interfaces';
 import { IWarehouse } from '../../warehouse/intefaces/warehouse.interfaces';
@@ -65,6 +65,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id, product_id }) => {
     const [rows, setRows] = useState<ITrackList[]>([]);
     const [totalLength, setTotalLength] = useState(0);
     const [addTrackModal, setAddTrackModal] = useState(false);
+    const [transferTrackModal, setTransferTrackModal] = useState(false);
     const [selectedTrackId, setSelectedTrackId] = useState('');
     const [trackInfo, setTrackInfo] = useState<ITrackInfo>({} as ITrackInfo);
     const [unitHierarchy, setUnitHierarchy] = useState<IUnitList[]>([])
@@ -89,6 +90,10 @@ const Tracks: FC<StockTrackProps> = ({ stock_id, product_id }) => {
 
     const handleAddTrackModalClose = () => {
         setAddTrackModal(false);
+    }
+
+    const handleTransferTrackModalClose = () => {
+        setTransferTrackModal(false);
     }
 
     const getTracks = async () => {
@@ -161,7 +166,7 @@ const Tracks: FC<StockTrackProps> = ({ stock_id, product_id }) => {
                     <div className='text-[16px]'><Typography color='#777777'>Available Quantity</Typography>   {trackInfo?.total_available ?? '0'} </div>
                     {/* <div className='text-[16px]'><Typography color='#777777'>Stored</Typography>  {trackInfo?.total_stored ? trackInfo.total_stored : 0} </div> */}
                     <div className='flex justify-end gap-5'>
-                        <Button variant='contained' color='info' onClick={() => { setSelectedTrackId(''); setAddTrackModal(true) }}>Transfer Track</Button>
+                        <Button variant='contained' color='info' onClick={() => { setSelectedTrackId(''); setTransferTrackModal(true) }}>Transfer Track</Button>
                         <Button variant='contained' color='primary' onClick={() => { setSelectedTrackId(''); setAddTrackModal(true) }}>Add Track</Button>
 
                     </div>
@@ -247,6 +252,9 @@ const Tracks: FC<StockTrackProps> = ({ stock_id, product_id }) => {
 
             <Modal open={addTrackModal} onClose={handleAddTrackModalClose} disableEscapeKeyDown={false}>
                 <AddTrack stock_id={stock_id} handleClose={handleAddTrackModalClose} track_id={selectedTrackId} unitHierarchy={unitHierarchy} product_id={product_id} handleRefresh={handleRefresh} />
+            </Modal>
+            <Modal open={transferTrackModal} onClose={handleTransferTrackModalClose} disableEscapeKeyDown={false}>
+                <TransferTrack stock_id={stock_id} handleClose={handleTransferTrackModalClose} track_id={selectedTrackId} unitHierarchy={unitHierarchy} product_id={product_id} handleRefresh={handleRefresh} />
             </Modal>
         </div>
 
@@ -423,12 +431,14 @@ const AddTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, unitHier
 
 const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, unitHierarchy, product_id, handleRefresh }) => {
 
-    const [track, setTrack] = useState<ITrack>({ stock: { stock_id } } as ITrack)
+    const [track, setTrack] = useState<ITransferTrack>({ stock: { stock_id } } as ITransferTrack)
     const [status, setStatus] = useState<ISelect | null | undefined>(null);
     const today = new Date()
     const [checkedDate, setCheckedDate] = useState(today.toISOString().split('T')[0]);
     const [warehouseList, setWarehouseList] = useState<ISelect[]>([]);
-    const [warehouse, setWarehouse] = useState<ISelect | null>(null)
+    const [fromWarehouse, setFromWarehouse] = useState<ISelect | null>(null)
+    const [toWarehouse, setToWarehouse] = useState<ISelect | null>(null)
+    const [totalAvailable, setTotalAvailable] = useState(0);
     const [unitQty, setUnitQty] = useState<IQunatityCalculatorParent | null>(null)
     const [showError, setShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
@@ -442,10 +452,21 @@ const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, uni
     }
 
     const handleSave = async () => {
+        if (unitQty && unitQty.quantity > totalAvailable) {
+            setErrorMessage("Quantity Exceeds");
+            setShowError(true);
+            return;
+        }
+        if (fromWarehouse?.value == toWarehouse?.value) {
+            setErrorMessage("Please choose different warehouses");
+            setShowError(true);
+            return;
+        }
         const data = { ...track };
         data.status = status ? status?.value : '';
-        data.checked_date = checkedDate;
-        data.warehouse = { warehouse_id: warehouse ? warehouse?.value : '' }
+        data.transfer_date = checkedDate;
+        data.fromWarehouse = { warehouse_id: fromWarehouse ? fromWarehouse?.value : '' }
+        data.toWarehouse = { warehouse_id: toWarehouse ? toWarehouse?.value : '' }
         data.stock = { stock_id: stock_id }
         if (unitQty) {
             data.quantity = unitQty.quantity.toString();
@@ -454,7 +475,7 @@ const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, uni
 
 
         if (track_id) {
-            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/track/" + track_id
+            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/track/transfer/" + track_id
             let response = await fetch(url, {
                 method: 'PATCH',
                 headers: {
@@ -471,7 +492,7 @@ const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, uni
                 setShowError(true)
             }
         } else {
-            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/track"
+            const url = process.env.NEXT_PUBLIC_BACKEND_URL + "stock/track/transfer"
             let response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -512,9 +533,29 @@ const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, uni
             setTrack(result);
             setStatus(TRACK_STATUS_LIST.find(x => x.value == result.status))
             setCheckedDate(result.checked_date);
-            setWarehouse({ value: result.warehouse?.warehouse_id, label: result.warehouse?.warehouse_name })
+            setFromWarehouse({ value: result.fromWarehouse?.warehouse_id, label: result.fromWarehouse?.warehouse_name })
+            setToWarehouse({ value: result.toWarehouse?.warehouse_id, label: result.fromWarehouse?.warehouse_name })
         }
     }
+
+    const getTrackInfoByWarehouse = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/track/getInfoByWarehouse/${stock_id}/${fromWarehouse?.value}`;
+        let response = await fetch(url);
+        if (response.ok) {
+            let result = await response.json();
+            setTotalAvailable(result.total_available);
+        } else {
+
+        }
+    }
+
+    const totalAvailableLabel = useMemo(() => {
+        return calculateQuantityWithHierarchy(unitHierarchy, [{ unit_id: unitHierarchy[unitHierarchy.length - 1].unit_id, quantity: totalAvailable }]).quantityString;
+    }, [totalAvailable])
+
+    useEffect(() => {
+        getTrackInfoByWarehouse();
+    }, [fromWarehouse])
 
     useEffect(() => {
         getWarehouseList();
@@ -534,13 +575,26 @@ const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, uni
                 <Grid container columnSpacing={4} sx={{ paddingBottom: '20px' }}>
                     <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
-                            <Select options={TRACK_STATUS_LIST} placeholder='Status' styles={{
+                            <Select options={warehouseList} placeholder='From Warehouse' styles={{
                                 control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
                                 menu: (styles) => ({ ...styles, width: '100%' }),
                                 menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
                             }}
-                                value={status}
-                                onChange={(option) => setStatus(option)}
+                                value={fromWarehouse}
+                                onChange={(option) => setFromWarehouse(option)}
+                            />
+                            <label className='pl-[10px] text-[13px]'>Available - {totalAvailableLabel}</label>
+                        </div>
+                    </Grid>
+                    <Grid size={{ xs: 12, lg: 6 }}>
+                        <div className="pt-[20px]">
+                            <Select options={warehouseList} placeholder='To Warehouse' styles={{
+                                control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
+                                menu: (styles) => ({ ...styles, width: '100%' }),
+                                menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
+                            }}
+                                value={toWarehouse}
+                                onChange={(option) => setToWarehouse(option)}
                             />
                         </div>
                     </Grid>
@@ -558,23 +612,12 @@ const TransferTrack: FC<AddTrackProps> = ({ stock_id, handleClose, track_id, uni
                     <Grid size={{ xs: 12, lg: 6 }}>
                         <div className="pt-[20px]">
                             <div className='w-[100%] border-[#CCCCCC] border-[1px] h-[55px] rounded-[7px] justify-center flex items-center'>
-                                <label className='text-[#777777]'>Checked Date - &nbsp; &nbsp;</label>
+                                <label className='text-[#777777]'>Transfer Date - &nbsp; &nbsp;</label>
                                 <input type='date' value={checkedDate} onChange={(e) => setCheckedDate(e.target.value)} />
                             </div>
                         </div>
                     </Grid>
-                    <Grid size={{ xs: 12, lg: 6 }}>
-                        <div className="pt-[20px]">
-                            <Select options={warehouseList} placeholder='Warehouse' styles={{
-                                control: (styles) => ({ ...styles, width: '100%', height: '55px' }),
-                                menu: (styles) => ({ ...styles, width: '100%' }),
-                                menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
-                            }}
-                                value={warehouse}
-                                onChange={(option) => setWarehouse(option)}
-                            />
-                        </div>
-                    </Grid>
+
                 </Grid>
 
 

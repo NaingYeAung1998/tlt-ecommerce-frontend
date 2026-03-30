@@ -1,4 +1,4 @@
-import { FC, memo, useEffect, useMemo, useState } from "react"
+import { FC, memo, useEffect, useMemo, useRef, useState } from "react"
 import { calculateLowestUnitQuantity, calculateRoundUpUnit } from "../utils"
 import { IUnitList } from "../dashboard/unit/interfaces/unit.interface"
 import { Box, Button, Modal, TextField, Typography } from "@mui/material"
@@ -20,6 +20,7 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
     const [quantityList, setQuantityList] = useState<any[]>([]);
     const [editQuantityModalOpen, setEditQuantityModalOpen] = useState(false);
     const [roundupQuantityString, setRoundupQuantityString] = useState('');
+    const qtyInputRef = useRef<any[]>([]);
 
     useEffect(() => {
         calculateQuantity(true)
@@ -84,6 +85,12 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
         let qtyList = [...quantityList];
         qtyList.push({ id: (qtyList.length + 1).toString(), quantity: 0, option: null });
         setQuantityList(qtyList)
+        setTimeout(() => {
+            if (qtyInputRef && qtyInputRef.current[qtyList.length - 1]) {
+                qtyInputRef.current[qtyList.length - 1].focus();
+                qtyInputRef.current[qtyList.length - 1].select();
+            }
+        }, 50)
     }
 
     const handleDeleteQuantity = (id: string) => {
@@ -121,7 +128,7 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
                             quantityList.map((qty: any, index: number) =>
                                 <div className="md:flex gap-4 pb-[30px]" key={index}>
                                     <div className="md:w-[40%]">
-                                        <TextField type="number" value={qty.quantity} label="Quantity" onChange={(e) => handleQuantityChange(e.target.value, qty.id)} />
+                                        <TextField inputRef={(ref) => qtyInputRef.current[index] = ref} type="number" value={qty.quantity} label="Quantity" onChange={(e) => handleQuantityChange(e.target.value, qty.id)} />
                                     </div>
                                     <div className="md:w-[45%]">
                                         <Select options={unitList} placeholder='Units' styles={{

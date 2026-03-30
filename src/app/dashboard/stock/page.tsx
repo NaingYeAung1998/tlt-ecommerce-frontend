@@ -132,7 +132,7 @@ export default function Stocks() {
                     const unitHierarchy = unitHierarchies?.find(x => x.some(y => y.unit_id == stock.stock_unit_id))
                     if (unitHierarchy) {
                         const perBagUnitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, stock.stock_product_per_bag_unit_id, stock.stock_product_per_bag_quantity);
-                        stock = formatStockData(stock, unitHierarchy)
+                        stock = formatStockData(stock, perBagUnitHierarchy)
                     }
 
                 })

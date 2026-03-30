@@ -33,6 +33,7 @@ export interface IStock {
     unit: IUnitRelation;
     quantity: string;
     buying_price: string;
+    buying_price_lowest_unit: string;
     selling_price: string;
     fix_price: string;
     wholesale_selling_price: string;
