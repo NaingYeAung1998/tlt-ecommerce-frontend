@@ -6,6 +6,22 @@ export const formatCurrency = (amount: number) => {
     return nfObject.format(amount) + " MMK"
 }
 
+export const roundUpPrice = (amount: string) => {
+    if (isDecimal(amount)) {
+        let amountSegs = amount.split(".");
+        amount = amountSegs[0];
+    }
+    if (amount.endsWith("00") || amount.length < 4) {
+        return parseFloat(amount)
+    }
+    amount.slice(-2);
+    return ((parseInt(amount) + 1) * 100);
+}
+
+export const isDecimal = (input: string) => {
+    return input.includes(".");
+}
+
 export const calculateRoundUpUnit = (hierarchy: IUnitList[], lowestQty: number) => {
     let roundupUnits = [];
     let currentUnitQuantity = lowestQty

@@ -8,7 +8,7 @@ import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Label } from "@
 import Select from 'react-select'
 import { IProductList } from "../dashboard/product/interfaces/product.interface"
 import QuantityCalculator from "./quantityCalculator"
-import { calculateLowestUnitQuantity, calculateRoundUpUnit, handleNextFocus } from "../utils"
+import { calculateLowestUnitQuantity, calculateRoundUpUnit, handleNextFocus, roundUpPrice } from "../utils"
 
 type OrderItemProps = {
     products: IProductList[],
@@ -108,8 +108,8 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, ne
             let price = (perBagPrice / product_quantity_per_bag.quantity) * prevItem.quantity;
             let fixedPrice = (perBagFixedPrice / product_quantity_per_bag.quantity) * prevItem.quantity;
 
-            setFixedPrice(fixedPrice)
-            prevItem.selling_price = price;
+            setFixedPrice(roundUpPrice(fixedPrice.toString()))
+            prevItem.selling_price = roundUpPrice(price.toString());
             updateItem(prevItem)
         } else {
             setFixedPrice(0)
