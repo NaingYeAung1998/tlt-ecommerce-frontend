@@ -55,7 +55,6 @@ function AddStock() {
         if (perBagLowestQty != 0) {
             data.buying_price_lowest_unit = (parseFloat(data.buying_price) / perBagLowestQty).toString();
         }
-
         if (fullyStored) {
             data.stock_tracks = [];
             const today = new Date();
@@ -273,6 +272,11 @@ function AddStock() {
         setEditQuantityModalOpen(false);
     }
 
+    const openEditQuantityModal = () => {
+        setEditQuantityModalOpen(true);
+        handleAddQuanttiy();
+    }
+
     useEffect(() => {
         getProductList();
         getSupplierList();
@@ -343,7 +347,7 @@ function AddStock() {
                     <Grid size={{ xs: 12, sm: 6 }}>
                         <div className="pt-[20px] flex gap-3">
                             <TextField type="text" InputLabelProps={{ shrink: !!roundupQuantity }} value={roundupQuantity} variant="outlined" label="Quantity" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} />
-                            <Button variant="outlined" onClick={() => setEditQuantityModalOpen(true)}><EditIcon /></Button>
+                            <Button variant="outlined" onClick={() => openEditQuantityModal()}><EditIcon /></Button>
                         </div>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>

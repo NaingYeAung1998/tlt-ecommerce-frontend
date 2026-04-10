@@ -17,6 +17,7 @@ export interface IOrder {
     total_paid: number;
     customer_name: string;
     order_date: string;
+    other_charges: string;
     address: string;
     customer?: ICustomerRelation;
     items: IOrderItem[],
@@ -44,7 +45,7 @@ export interface IOrderItemDisplay extends IOrderItem {
 }
 
 export interface IOrderPayment {
-    payment_id?: string;
+    order_payment_id?: string;
     amount: string;
     payment_date: string;
     payment_channel?: string;

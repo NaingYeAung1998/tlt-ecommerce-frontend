@@ -31,13 +31,13 @@ function AddOrder() {
         return { item_id: (length + 1).toString(), quantity: 0, missing_quantity: 0, unitHierarchy: [], productStocks: [] }
     }
     const initPayment = (length: number): IOrderPayment => {
-        return { payment_id: (length + 1).toString(), amount: '0', payment_date: '' }
+        return { order_payment_id: (length + 1).toString(), amount: '0', payment_date: '' }
     }
     const [item, setItem] = useState<IOrderItemDisplay>(initItem(0) as IOrderItemDisplay)
     const [payment, setPayment] = useState<IOrderPayment>(initPayment(0))
     const [customerList, setCustomerList] = useState<ISelect[]>([])
     const [products, setProducts] = useState<IProductList[]>([])
-    const [fullyPaid, setFullyPaid] = useState(true);
+    const [fullyPaid, setFullyPaid] = useState(!id);
     const [customer, setCustomer] = useState<ISelect | null>(null)
     const [orderDate, setOrderDate] = useState(today.toISOString().split('T')[0])
     const [payments, setPayments] = useState<any>([])
@@ -54,8 +54,8 @@ function AddOrder() {
     const totalPrice = useMemo(() => {
         let total: number = 0;
         orderItems.forEach((item: IOrderItemDisplay) => { total += (item.selling_price ? parseFloat(item.selling_price.toString()) : 0) })
-        return total;
-    }, [orderItems])
+        return total + parseFloat(order.other_charges);
+    }, [orderItems, order.other_charges])
 
     const getCustomerList = async () => {
         const url = process.env.NEXT_PUBLIC_BACKEND_URL + "customer?perPage=-1"
@@ -87,13 +87,19 @@ function AddOrder() {
         setOrder(currentOrder);
     }
 
+    const handleOtherChargesChange = (charges: string) => {
+        let currentOrder = { ...order };
+        currentOrder.other_charges = charges;
+        setOrder(currentOrder);
+    }
+
     const handleSave = async () => {
         setLoading(true);
         const data = { ...order };
         data.items = orderItems.map((item, index) => { return { product: item.product, quantity: item.quantity, missing_quantity: 0, stock: item.stock, selling_price: item.selling_price, unit: item.unit, productStocks: [], unitHierarchy: [], sortOrder: index } })
         data.payments = [];
         if (fullyPaid) {
-            data.payments.push({ amount: totalPrice.toString(), payment_date: today.toISOString().split('T')[0], payment_channel: '', note: '' })
+            data.payments.push({ amount: (totalPrice).toString(), payment_date: today.toISOString().split('T')[0], payment_channel: '', note: '' })
         } else {
             payments.forEach((payment: any) => {
                 data.payments.push({ amount: payment.amount, payment_date: payment.payment_date, payment_channel: payment.payment_channel, note: payment.note })
@@ -185,7 +191,7 @@ function AddOrder() {
     const handleAddOrUpdatePayment = () => {
         const currentPayments = [...payments];
         const currentPayment = { ...payment };
-        let orderPayment = currentPayments.find(x => x.payment_id != currentPayment.payment_id);
+        let orderPayment = currentPayments.find(x => x.payment_id != currentPayment.order_payment_id);
         if (orderPayment) {
             let index = currentPayments.indexOf(orderPayment);
             currentPayments[index] = currentPayment;
@@ -221,14 +227,10 @@ function AddOrder() {
         setPayments(currentPayments);
     }
 
-    const handlePaymentChange = (field: string, value: string, payment_id: string) => {
-        let currentPayments = [...payments];
-        let payment = currentPayments.find(x => x.payment_id == payment_id);
-        if (payment) {
-            const index = currentPayments.indexOf(payment);
-            currentPayments[index][field] = value;
-            setPayments(currentPayments)
-        }
+    const handlePaymentChange = (field: 'amount' | 'payment_date' | 'payment_channel' | 'note', value: string) => {
+        let prevPayment = { ...payment };
+        prevPayment[field] = value;
+        setPayment(prevPayment);
     }
 
     const handleDeletePayment = (payment_id: string) => {
@@ -264,9 +266,9 @@ function AddOrder() {
             await Promise.all(itemPromises);
             setOrder(result);
             setOrderItems(result.items)
-            setCustomer({ label: result.customer.customer_name, value: result.customer.customer_id })
+            setCustomer({ label: result.customer ? result.customer.customer_name : result.customer_name, value: result.customer ? result.customer.customer_id : result.customer_name })
             setOrderDate(result.order_date)
-            // setPayments(result.payments)
+            setPayments(result.payments)
 
         }
     }
@@ -281,7 +283,7 @@ function AddOrder() {
     }, [])
 
 
-
+    const paymentTotal = payments.reduce((prev: any, current: any) => prev + parseFloat(current.amount), 0)
 
     return (
         <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px', overflowY: 'auto', height: '95vh', width: '100%' }}>
@@ -321,7 +323,11 @@ function AddOrder() {
                                 <TextField inputRef={addressRef} type="text" InputLabelProps={{ shrink: !!order.address }} value={order.address} variant="outlined" label="Address" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} onChange={(e) => handleAddressChange(e.target.value)} onKeyDown={(e) => { handleNextFocus(e, itemRef) }} />
                             </div>
                         </Grid>
-
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <div className="pt-[20px]">
+                                <TextField type="number" InputLabelProps={{ shrink: !!order.other_charges }} value={order.other_charges} variant="outlined" label="Other Charges" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} onChange={(e) => handleOtherChargesChange(e.target.value)} />
+                            </div>
+                        </Grid>
 
                     </Grid>
                     <Divider />
@@ -342,48 +348,73 @@ function AddOrder() {
                     {
 
                         !fullyPaid ?
-                            <div className="pt-[20px]">
-                                <div className="flex">
+                            <></>
+                            // <div className="pt-[20px]">
+                            //     <Grid container columnSpacing={4} sx={{ paddingBottom: '20px' }}>
+                            //         <Grid size={{ xs: 12, sm: 6 }}>
+                            //             <div className="pt-[20px]">
+                            //                 <TextField variant="outlined" placeholder="Amount" value={payment.amount} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("amount", e.target.value)} />
+                            //             </div>
+                            //         </Grid>
+                            //         <Grid size={{ xs: 12, sm: 6 }}>
+                            //             <div className="pt-[20px]">
+                            //                 <input type='date' value={payment.payment_date} onChange={(e) => handlePaymentChange("payment_date", e.target.value)} />
+                            //             </div>
+                            //         </Grid>
+                            //         <Grid size={{ xs: 12, sm: 6 }}>
+                            //             <div className="pt-[20px]">
+                            //                 <TextField variant="outlined" placeholder="Channel" value={payment.payment_channel} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("payment_channel", e.target.value)} />
+                            //             </div>
+                            //         </Grid>
+                            //         <Grid size={{ xs: 12, sm: 6 }}>
+                            //             <div className="pt-[20px]">
+                            //                 <TextField variant="outlined" placeholder="Note" value={payment.note} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("note", e.target.value)} />
+                            //             </div>
+                            //         </Grid>
+                            //     </Grid>
+                            //     <div className="flex justify-start pt-[20px] gap-4">
+                            //         {payments.map((payment: any) => payment.order_payment_id).includes(payment.order_payment_id) ? <Button variant="outlined" color="warning" onClick={() => setPayment(initPayment(payments.length))}>Cancel</Button> : <></>}
+                            //         <Button ref={addRef} variant="contained" color="primary" onClick={() => handleAddOrUpdatePayment()}>{payments.map((payment: any) => payment.order_payment_id).includes(payment.order_payment_id) ? 'Update' : 'Add'}</Button>
+                            //     </div>
+                            //     <div className="p-[20px]">
+                            //         {/* <TableContainer> */}
 
-                                </div>
-                                <div className="p-[20px]">
-                                    {/* <TableContainer> */}
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell style={{ width: '400px', minWidth: '200px' }}>Amount</TableCell>
-                                                <TableCell style={{ width: '400px', minWidth: '200px' }}>Payment Date</TableCell>
-                                                <TableCell style={{ width: '400px', minWidth: '200px' }}>Payment Channel</TableCell>
-                                                <TableCell style={{ width: '400px', minWidth: '200px' }}>Note</TableCell>
-                                                <TableCell align="right"><Button variant="outlined" color="primary" onClick={() => handleAddPayment()}><AddIcon /></Button></TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {
-                                                payments.map((payment: any, index: number) =>
-                                                    <TableRow key={index}>
-                                                        <TableCell style={{ width: '400px', minWidth: '200px' }}>
-                                                            <TextField variant="outlined" value={payment.amount} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("amount", e.target.value, payment.payment_id)} />
-                                                        </TableCell>
-                                                        <TableCell style={{ width: '400px', minWidth: '200px' }}>
-                                                            <input type='date' value={payment.payment_date} onChange={(e) => handlePaymentChange("payment_date", e.target.value, payment.payment_id)} />
-                                                        </TableCell>
-                                                        <TableCell style={{ width: '400px', minWidth: '200px' }}>
-                                                            <TextField variant="outlined" value={payment.payment_channel} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("payment_channel", e.target.value, payment.payment_id)} />
-                                                        </TableCell>
-                                                        <TableCell style={{ width: '400px', minWidth: '200px' }}>
-                                                            <TextField variant="outlined" value={payment.note} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("note", e.target.value, payment.payment_id)} />
-                                                        </TableCell>
-                                                        <TableCell align="right"><Button variant="outlined" color="warning" onClick={() => handleDeletePayment(payment.payment_id)}><DeleteIcon /></Button></TableCell>
-                                                    </TableRow>
-                                                )
-                                            }
-                                        </TableBody>
-                                    </Table>
-                                    {/* </TableContainer> */}
+                            //         {/* <Table>
+                            //             <TableHead>
+                            //                 <TableRow>
+                            //                     <TableCell style={{ width: '400px', minWidth: '200px' }}>Amount</TableCell>
+                            //                     <TableCell style={{ width: '400px', minWidth: '200px' }}>Payment Date</TableCell>
+                            //                     <TableCell style={{ width: '400px', minWidth: '200px' }}>Payment Channel</TableCell>
+                            //                     <TableCell style={{ width: '400px', minWidth: '200px' }}>Note</TableCell>
+                            //                     <TableCell align="right"><Button variant="outlined" color="primary" onClick={() => handleAddPayment()}><AddIcon /></Button></TableCell>
+                            //                 </TableRow>
+                            //             </TableHead>
+                            //             <TableBody>
+                            //                 {
+                            //                     payments.map((payment: any, index: number) =>
+                            //                         <TableRow key={index}>
+                            //                             <TableCell style={{ width: '400px', minWidth: '200px' }}>
+                            //                                 <TextField variant="outlined" value={payment.amount} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("amount", e.target.value, payment.payment_id)} />
+                            //                             </TableCell>
+                            //                             <TableCell style={{ width: '400px', minWidth: '200px' }}>
+                            //                                 <input type='date' value={payment.payment_date} onChange={(e) => handlePaymentChange("payment_date", e.target.value, payment.payment_id)} />
+                            //                             </TableCell>
+                            //                             <TableCell style={{ width: '400px', minWidth: '200px' }}>
+                            //                                 <TextField variant="outlined" value={payment.payment_channel} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("payment_channel", e.target.value, payment.payment_id)} />
+                            //                             </TableCell>
+                            //                             <TableCell style={{ width: '400px', minWidth: '200px' }}>
+                            //                                 <TextField variant="outlined" value={payment.note} sx={{ width: { xs: '100%', lg: '50%' } }} onChange={(e) => handlePaymentChange("note", e.target.value, payment.payment_id)} />
+                            //                             </TableCell>
+                            //                             <TableCell align="right"><Button variant="outlined" color="warning" onClick={() => handleDeletePayment(payment.payment_id)}><DeleteIcon /></Button></TableCell>
+                            //                         </TableRow>
+                            //                     )
+                            //                 }
+                            //             </TableBody>
+                            //         </Table> */}
+                            //         {/* </TableContainer> */}
 
-                                </div>
-                            </div>
+                            //     </div>
+                            // </div>
                             : <></>
                     }
 
@@ -436,7 +467,31 @@ function AddOrder() {
                                                     </>
 
                                                     :
-                                                    <></>
+                                                    <>
+                                                        {
+                                                            payments.map((payment: any, index: number) =>
+                                                                <TableRow>
+                                                                    <TableCell colSpan={2}></TableCell>
+                                                                    <TableCell><Typography variant="body2" fontWeight={'bold'}>{payment.payment_date}</Typography></TableCell>
+                                                                    <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(payment.amount)}</Typography></TableCell>
+                                                                    <TableCell></TableCell>
+                                                                </TableRow>
+                                                            )
+
+                                                        }
+                                                        <TableRow>
+                                                            <TableCell colSpan={2}></TableCell>
+                                                            <TableCell><Typography variant="body2" fontWeight={'bold'}>Total Paid</Typography></TableCell>
+                                                            <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(paymentTotal)}</Typography></TableCell>
+                                                            <TableCell></TableCell>
+                                                        </TableRow>
+                                                        <TableRow>
+                                                            <TableCell colSpan={2}></TableCell>
+                                                            <TableCell><Typography variant="body2" fontWeight={'bold'}>Unpaid</Typography></TableCell>
+                                                            <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(totalPrice - paymentTotal)}</Typography></TableCell>
+                                                            <TableCell></TableCell>
+                                                        </TableRow>
+                                                    </>
                                             }
                                         </>
                                         : <></>
