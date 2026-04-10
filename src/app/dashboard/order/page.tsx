@@ -252,7 +252,7 @@ type AddPaymentModalProps = {
     order_id: string,
     close: () => void
 }
-export const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
+const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
     const today = new Date();
     const initPayment = (length: number): IOrderPayment => {
         return { order_payment_id: (length + 1).toString(), amount: '0', payment_date: today.toISOString().split('T')[0], payment_channel: '', note: '' }
@@ -437,7 +437,7 @@ type AddOrderTrackModalProps = {
     close: () => void
 }
 
-export const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) => {
+const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) => {
     const today = new Date();
     const initItem = (length: number, currentItems: any[] = []) => {
         if (length == 0) {
