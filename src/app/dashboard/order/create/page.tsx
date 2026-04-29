@@ -150,6 +150,16 @@ function AddOrder() {
 
     }
 
+    const printTest = async () => {
+        const url = process.env.NEXT_PUBLIC_BACKEND_URL + "order/print"
+        let response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+    }
+
 
     const handleAddOrUpdateItem = () => {
         const currentOrderItems = [...orderItems]
@@ -507,6 +517,7 @@ function AddOrder() {
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
                 <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
+                <Button onClick={() => printTest()}>{'Print'}</Button>
             </div>
 
         </Box>
