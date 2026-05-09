@@ -230,8 +230,19 @@ function AddOrder() {
     };
 
     const printViaUSB = async (data: Uint8Array) => {
+        const printers = await navigator.usb.getDevices();
+        let device: any;
+        if (printers.length > 0) {
+            // Use the first already-authorized printer
+            device = printers[0];
+            await device.open();
+            // No popup will appear!
+        } else {
+            // Only show the popup if no device was remembered
+            device = await navigator.usb.requestDevice({ filters: [] });
+        }
         // Request a USB device (filters can be empty to show all, or specific to your vendor)
-        const device = await navigator.usb.requestDevice({ filters: [] });
+        // const device = await navigator.usb.requestDevice({ filters: [] });
         await device.open();
 
         // Select configuration (usually 1) and claim interface (usually 0)
