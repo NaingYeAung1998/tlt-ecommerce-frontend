@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { IUnitList } from "./dashboard/unit/interfaces/unit.interface";
+import { IOrderItemDisplay } from "./dashboard/order/interfaces/order.interface";
 
 export const formatCurrency = (amount: number) => {
     let nfObject = new Intl.NumberFormat('en-US');
@@ -153,3 +154,40 @@ export const handleNextFocus = (e: any, nextRef: React.RefObject<HTMLInputElemen
         }
     }
 }
+
+export const generateReceiptBuffer = (order: any): Uint8Array => {
+    const encoder = new TextEncoder();
+
+    const ESC = 0x1b;
+    const GS = 0x1d;
+    const Initialize = [ESC, 0x40];
+    const BoldOn = [ESC, 0x45, 0x01];
+    const BoldOff = [ESC, 0x45, 0x00];
+    const Center = [ESC, 0x61, 0x01];
+    const Cut = [GS, 0x56, 0x41, 0x00];
+
+    let commands: number[] = [
+        ...Initialize,
+        ...Center,
+        ...BoldOn,
+        ...Array.from(encoder.encode("THALARHTUN\n")),
+        ...BoldOff,
+        ...Array.from(encoder.encode(`Voucher No: ${order.voucher_code}\n`)),
+        ...Array.from(encoder.encode("--------------------------\n")),
+    ];
+
+    order.order_items.forEach((item: IOrderItemDisplay) => {
+        const line = `${item.product_name?.padEnd(15)} x${item.unit_quantity} ${item.selling_price}\n`;
+        commands.push(...Array.from(encoder.encode(line)));
+    });
+
+    commands.push(
+        ...Array.from(encoder.encode("--------------------------\n")),
+        ...BoldOn,
+        ...Array.from(encoder.encode(`TOTAL: ${order.total}\n\n\n`)),
+        ...BoldOff,
+        ...Cut
+    );
+
+    return new Uint8Array(commands);
+};

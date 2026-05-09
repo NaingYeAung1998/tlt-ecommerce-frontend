@@ -9,7 +9,7 @@ import { ISupplier } from "../../supplier/interfaces/supplier.interface";
 import { ISelect } from "@/app/interfaces";
 import { IStockList } from "../../stock/interfaces/stock.interface";
 import { Add as AddIcon, Delete as DeleteIcon, PlusOne } from "@mui/icons-material";
-import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, handleNextFocus } from "@/app/utils";
+import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, generateReceiptBuffer, handleNextFocus } from "@/app/utils";
 import { IUnitList } from "../../unit/interfaces/unit.interface";
 import { IOrder, IOrderItem, IOrderItemDisplay, IOrderPayment } from "../interfaces/order.interface";
 import { ICustomer } from "../../customer/interfaces/customer.interface";
@@ -44,6 +44,7 @@ function AddOrder() {
     const [paymentTotalAmount, setPaymentTotalAmount] = useState("0 MMK")
     const [showError, setShowError] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [printStatus, setPrintStatus] = useState("");
 
     //input refs
     const customerRef = useRef<any>(null);
@@ -159,6 +160,116 @@ function AddOrder() {
             }
         })
     }
+
+    // const handlePrint = async () => {
+    //     try {
+    //         const orderDisplay = {
+    //             voucher_code: order.voucher_code,
+    //             order_items: orderItems,
+    //             total: totalPrice
+    //         }
+    //         const data = generateReceiptBuffer(orderDisplay);
+    //         console.log(data);
+    //         setPrintStatus("Searching for printer...");
+
+    //         const device = await navigator.bluetooth.requestDevice({
+    //             filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }],
+    //             optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+    //         });
+
+    //         setPrintStatus("Connecting...");
+    //         const server = await device.gatt?.connect();
+
+    //         // 2. Get the Primary Service and Characteristic
+    //         const service = await server?.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+    //         const characteristics = await service?.getCharacteristics();
+
+    //         // Usually, the first characteristic that supports 'write' is the one
+    //         const characteristic = characteristics?.find(c => c.properties.write);
+
+    //         if (!characteristic) throw new Error("Print characteristic not found");
+
+    //         setPrintStatus("Sending data...");
+
+
+    //         // 3. Write data to printer
+    //         await characteristic.writeValue(data as BufferSource);
+
+    //         setPrintStatus("Print successful!");
+    //         device.gatt?.disconnect();
+    //     } catch (error: any) {
+    //         console.error(error);
+    //         setPrintStatus(`Error: ${error.message}`);
+    //     }
+    // };
+
+    const handlePrint = async () => {
+        const orderDisplay = {
+            voucher_code: order.voucher_code,
+            order_items: orderItems,
+            total: totalPrice
+        }
+        const data = generateReceiptBuffer(orderDisplay);
+        console.log(data);
+
+        try {
+            setPrintStatus("Trying USB connection...");
+            await printViaUSB(data);
+            setPrintStatus("Printed via USB!");
+        } catch (usbError) {
+            console.warn("USB failed or cancelled, trying Bluetooth...", usbError);
+
+            try {
+                setPrintStatus("Trying Bluetooth connection...");
+                await printViaBluetooth(data);
+                setPrintStatus("Printed via Bluetooth!");
+            } catch (btError: any) {
+                setPrintStatus(`Printing failed: ${btError.message}`);
+            }
+        }
+    };
+
+    const printViaUSB = async (data: Uint8Array) => {
+        // Request a USB device (filters can be empty to show all, or specific to your vendor)
+        const device = await navigator.usb.requestDevice({ filters: [] });
+        await device.open();
+
+        // Select configuration (usually 1) and claim interface (usually 0)
+        await device.selectConfiguration(1);
+        await device.claimInterface(0);
+
+        // Find the Bulk Out endpoint (where we send data to the printer)
+        const outEndpoint = device.configuration?.interfaces[0].alternates[0].endpoints.find(
+            (e: any) => e.direction === 'out' && e.type === 'bulk'
+        );
+
+        if (!outEndpoint) throw new Error("USB Bulk Out endpoint not found");
+
+        // Send data (USB doesn't usually need chunking like BLE)
+        await device.transferOut(outEndpoint.endpointNumber, data as BufferSource);
+        await device.close();
+    };
+
+    const printViaBluetooth = async (data: Uint8Array) => {
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+        });
+        const server = await device.gatt?.connect();
+        const service = await server?.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        const characteristics = await service?.getCharacteristics();
+        const char = characteristics?.find(c => c.properties.write || c.properties.writeWithoutResponse);
+
+        if (!char) throw new Error("No write characteristic");
+
+        // BLE Chunking (20 bytes at a time)
+        const CHUNK_SIZE = 20;
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+            const chunk = data.slice(i, i + CHUNK_SIZE);
+            await char.writeValueWithoutResponse(chunk);
+        }
+
+        device.gatt?.disconnect();
+    };
 
 
     const handleAddOrUpdateItem = () => {
@@ -517,7 +628,7 @@ function AddOrder() {
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
                 <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
-                <Button onClick={() => printTest()}>{'Print'}</Button>
+                <Button onClick={() => handlePrint()}>{'Print'}</Button>
             </div>
 
         </Box>
