@@ -243,7 +243,9 @@ function AddOrder() {
         }
         // Request a USB device (filters can be empty to show all, or specific to your vendor)
         // const device = await navigator.usb.requestDevice({ filters: [] });
-        await device.open();
+        if (!device.opened) {
+            await device.open();
+        }
 
         // Select configuration (usually 1) and claim interface (usually 0)
         await device.selectConfiguration(1);
