@@ -9,7 +9,7 @@ import { ISupplier } from "../../supplier/interfaces/supplier.interface";
 import { ISelect } from "@/app/interfaces";
 import { IStockList } from "../../stock/interfaces/stock.interface";
 import { Add as AddIcon, Delete as DeleteIcon, PlusOne } from "@mui/icons-material";
-import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, generateReceiptBuffer, handleNextFocus } from "@/app/utils";
+import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, generateReceiptBufferFromHTML, handleNextFocus } from "@/app/utils";
 import { IUnitList } from "../../unit/interfaces/unit.interface";
 import { IOrder, IOrderItem, IOrderItemDisplay, IOrderPayment } from "../interfaces/order.interface";
 import { ICustomer } from "../../customer/interfaces/customer.interface";
@@ -55,7 +55,7 @@ function AddOrder() {
     const totalPrice = useMemo(() => {
         let total: number = 0;
         orderItems.forEach((item: IOrderItemDisplay) => { total += (item.selling_price ? parseFloat(item.selling_price.toString()) : 0) })
-        return total + parseFloat(order.other_charges);
+        return total + parseFloat(order.other_charges || '0');
     }, [orderItems, order.other_charges])
 
     const getCustomerList = async () => {
@@ -114,6 +114,7 @@ function AddOrder() {
                 data.customer_name = customer?.value
             }
         }
+        data.other_charges = data.other_charges || "0";
         data.order_date = orderDate;
 
         console.log(data);
@@ -206,10 +207,16 @@ function AddOrder() {
     const handlePrint = async () => {
         const orderDisplay = {
             voucher_code: order.voucher_code,
+            customer_name: customer?.label,
+            customer_address: order.address,
             order_items: orderItems,
-            total: totalPrice
+            date: order.order_date,
+            total: totalPrice,
+            otherCharges: order.other_charges ?? '0',
+            paid_amount: paymentTotal,
+            change_amount: totalPrice - paymentTotal
         }
-        const data = generateReceiptBuffer(orderDisplay);
+        const data = await generateReceiptBufferFromHTML(orderDisplay);
         console.log(data);
 
         try {

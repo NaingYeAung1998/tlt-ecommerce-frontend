@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { IUnitList } from "./dashboard/unit/interfaces/unit.interface";
 import { IOrderItemDisplay } from "./dashboard/order/interfaces/order.interface";
+import html2canvas from 'html2canvas';
 
 export const formatCurrency = (amount: number) => {
     let nfObject = new Intl.NumberFormat('en-US');
@@ -155,39 +156,183 @@ export const handleNextFocus = (e: any, nextRef: React.RefObject<HTMLInputElemen
     }
 }
 
-export const generateReceiptBuffer = (order: any): Uint8Array => {
-    const encoder = new TextEncoder();
+// export const generateReceiptBuffer = (order: any): Uint8Array => {
+//     const encoder = new TextEncoder();
 
-    const ESC = 0x1b;
-    const GS = 0x1d;
-    const Initialize = [ESC, 0x40];
-    const BoldOn = [ESC, 0x45, 0x01];
-    const BoldOff = [ESC, 0x45, 0x00];
-    const Center = [ESC, 0x61, 0x01];
-    const Cut = [GS, 0x56, 0x41, 0x00];
+//     const ESC = 0x1b;
+//     const GS = 0x1d;
+//     const Initialize = [ESC, 0x40];
+//     const BoldOn = [ESC, 0x45, 0x01];
+//     const BoldOff = [ESC, 0x45, 0x00];
+//     const Center = [ESC, 0x61, 0x01];
+//     const Cut = [GS, 0x56, 0x41, 0x00];
 
-    let commands: number[] = [
-        ...Initialize,
-        ...Center,
-        ...BoldOn,
-        ...Array.from(encoder.encode("THALARHTUN\n")),
-        ...BoldOff,
-        ...Array.from(encoder.encode(`Voucher No: ${order.voucher_code}\n`)),
-        ...Array.from(encoder.encode("--------------------------\n")),
-    ];
+//     let commands: number[] = [
+//         ...Initialize,
+//         ...Center,
+//         ...BoldOn,
+//         ...Array.from(encoder.encode("THALARHTUN\n")),
+//         ...BoldOff,
+//         ...Array.from(encoder.encode(`Voucher No: ${order.voucher_code}\n`)),
+//         ...Array.from(encoder.encode("--------------------------\n")),
+//     ];
 
-    order.order_items.forEach((item: IOrderItemDisplay) => {
-        const line = `${item.product_name?.padEnd(15)} x${item.unit_quantity} ${item.selling_price}\n`;
-        commands.push(...Array.from(encoder.encode(line)));
+//     order.order_items.forEach((item: IOrderItemDisplay) => {
+//         const line = `${item.product_name?.padEnd(15)} x${item.unit_quantity} ${item.selling_price}\n`;
+//         commands.push(...Array.from(encoder.encode(line)));
+//     });
+
+//     commands.push(
+//         ...Array.from(encoder.encode("--------------------------\n")),
+//         ...BoldOn,
+//         ...Array.from(encoder.encode(`TOTAL: ${order.total}\n\n\n`)),
+//         ...BoldOff,
+//         ...Cut
+//     );
+
+//     return new Uint8Array(commands);
+// };
+
+
+export const generateReceiptBufferFromHTML = async (order: any): Promise<Uint8Array> => {
+    // 1. Create a hidden container for the receipt layout
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+    container.style.width = '384px'; // Standard width for 58mm thermal printers (80mm uses ~576px)
+    container.style.backgroundColor = '#ffffff';
+    container.style.color = '#000000';
+    container.style.fontFamily = '"Myanmar Text", "Padauk", "Pyidaungsu", sans-serif';
+    container.style.fontSize = '14px';
+    container.style.lineHeight = '1.6';
+    container.style.padding = '10px';
+
+    // Format fallbacks dynamically
+    const voucherCode = order?.voucher_code ?? 'VC0001';
+    const dateStr = order?.date ?? '10.05.2026 8:43 PM';
+    const customerName = order?.customer_name ?? 'ထက်အောင်ဟိန်း';
+    const customerAddress = order?.customer_address ?? 'မန္တလေး';
+
+    const otherCharges = order?.other_charges ?? '-';
+    const totalAmount = order?.total ?? '-';
+    const paidAmount = order?.paid_amount ?? '-';
+    const changeAmount = order?.change_amount ?? '-';
+
+    // 2. Build the exact visual layout using HTML & Inline CSS
+    container.innerHTML = `
+        <div style="text-align: right; font-size: 14px; font-weight: bold; margin-bottom: 10px;">${voucherCode}</div>
+        
+        <div style="text-align: center; margin-bottom: 15px;">
+            <div style="font-size: 26px; font-weight: bold; margin-bottom: 2px;">သလ္လာထွန်း</div>
+            <div style="font-size: 18px; margin-bottom: 4px;">ပဲမျိုးစုံရောင်းဝယ်ရေး</div>
+            <div style="font-size: 13px; margin-bottom: 2px;">၈၇လမ်း၊ ၂၇x၂၈ကြား၊ မန္တလေးမြို့။</div>
+            <div style="font-size: 13px; margin-bottom: 6px;">09 2032794 | 09 793043753 | 09 779699003</div>
+            <div style="font-size: 13px;">Date : ${dateStr}</div>
+        </div>
+
+        <div style="margin-bottom: 15px; font-size: 15px;">
+            <div>အမည် - ${customerName}</div>
+            <div>လိပ်စာ - ${customerAddress}</div>
+        </div>
+
+        <div style="text-align: center; font-size: 16px; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px;">INVOICE</div>
+
+        <div id="items-section">
+            ${(order?.order_items || [{}, {}, {}]).map((item: any) => `
+                <div style="text-align: center; color: #000000; letter-spacing: 1px; margin: 2px 0; display:flex; justify-content: space-between;">
+                <span>${item.product_name}</span>
+                <span>${item.unit_quantity}</span>
+                <span>${item.selling_price}</span>
+                </div>
+                <div style="text-align: center; font-size: 12px; margin: 2px 0;">++++++</div>
+            `).join('')}
+            <div style="text-align: center; color: #000000; letter-spacing: 1px; margin: 2px 0;">++++++++++++++++++++++++++++++++++++</div>
+        </div>
+
+        <div style="margin-top: 15px; padding: 0 5px; font-size: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span>အခြား</span>
+                <span>${otherCharges}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span>စုစုပေါင်း</span>
+                <span>${totalAmount}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span>ပေးငွေ</span>
+                <span>${paidAmount}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span>ကျန်ငွေ</span>
+                <span>${changeAmount}</span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; font-size: 15px; line-height: 1.4;">
+            <div>*ဝယ်ယူအားပေးမှုကို</div>
+            <div>ကျေးဇူးအထူးတင်ရှိပါသည်*</div>
+        </div>
+    `;
+
+    document.body.appendChild(container);
+
+    // 3. Render the DOM element into a canvas image map
+    const canvas = await html2canvas(container, {
+        width: 384,
+        scale: 1, // Keep standard scale to map pixels beautifully to thermal dots
+        logging: false,
+        backgroundColor: '#ffffff'
     });
 
-    commands.push(
-        ...Array.from(encoder.encode("--------------------------\n")),
-        ...BoldOn,
-        ...Array.from(encoder.encode(`TOTAL: ${order.total}\n\n\n`)),
-        ...BoldOff,
-        ...Cut
-    );
+    document.body.removeChild(container);
+
+    // 4. Convert Canvas Pixel data to raw ESC/POS Bit-Image Data
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get 2D canvas context');
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const commands: number[] = [];
+
+    // ESC/POS Initialization
+    commands.push(0x1b, 0x40); // Initialize printer
+
+    // Print parameters
+    const widthPixels = canvas.width;
+    const heightPixels = canvas.height;
+    const widthBytes = Math.ceil(widthPixels / 8);
+
+    // GS v 0 Command for Raster Bit Image Printing
+    commands.push(0x1d, 0x76, 0x30, 0x00);
+    commands.push(widthBytes & 0xff, (widthBytes >> 8) & 0xff); // xL, xH bytes
+    commands.push(heightPixels & 0xff, (heightPixels >> 8) & 0xff); // yL, yH bytes
+
+    // Pack 8 pixels per byte (1 bit per pixel: 1 = Black, 0 = White)
+    for (let y = 0; y < heightPixels; y++) {
+        for (let xBytes = 0; xBytes < widthBytes; xBytes++) {
+            let byteValue = 0;
+            for (let bit = 0; bit < 8; bit++) {
+                const xPixel = xBytes * 8 + bit;
+                if (xPixel < widthPixels) {
+                    const idx = (y * widthPixels + xPixel) * 4;
+                    const r = imgData.data[idx];
+                    const g = imgData.data[idx + 1];
+                    const b = imgData.data[idx + 2];
+                    const alpha = imgData.data[idx + 3];
+
+                    // Simple luminance threshold to classify pixel as light or dark
+                    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    if (alpha > 128 && luminance < 128) {
+                        byteValue |= (1 << (7 - bit)); // Set the bit to 1 (Black)
+                    }
+                }
+            }
+            commands.push(byteValue);
+        }
+    }
+
+    // Paper Cut Commands
+    commands.push(0x1d, 0x56, 0x41, 0x00);
 
     return new Uint8Array(commands);
 };
