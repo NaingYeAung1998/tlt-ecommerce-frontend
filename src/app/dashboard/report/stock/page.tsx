@@ -1,0 +1,220 @@
+"use client"
+
+import Paper from '@mui/material/Paper';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TablePagination from '@mui/material/TablePagination';
+import TableRow from '@mui/material/TableRow';
+import { Alert, Box, Button, Grid, IconButton, Input, InputAdornment, Typography } from '@mui/material';
+import { Delete, Edit, Inventory, ListAlt, Search as SearchIcon } from '@mui/icons-material';
+import { useSearchParams } from 'next/navigation';
+import { KeyboardEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
+import moment from 'moment';
+import { MOMENT_FORMAT } from '@/app/constants';
+import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
+import { bindPerBagUnitHierarchy, calculateQuantityWithHierarchy, getAllUnitHierarchies } from '@/app/utils';
+import { IStockReportList } from './interfaces/stock.report.interface';
+
+interface Column {
+    id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'available_quantity' | 'product_description' | 'created_on';
+    label: string;
+    minWidth?: number;
+    align?: 'right' | 'left';
+}
+
+const columns: readonly Column[] = [
+    { id: 'product_name', label: 'Name', minWidth: 170 },
+    { id: 'product_code', label: 'Code', minWidth: 100 },
+    {
+        id: 'product_category',
+        label: 'Category',
+        minWidth: 170,
+        align: 'left',
+    },
+    {
+        id: 'product_grade',
+        label: 'Grade',
+        minWidth: 170,
+        align: 'left',
+
+    },
+    {
+        id: 'available_quantity',
+        label: 'Available Quantity',
+        minWidth: 170,
+        align: 'left',
+
+    }
+];
+
+
+export default function Products() {
+    const searchParams = useSearchParams();
+
+    const [search, setSearch] = useState('');
+    const [currentPage, setCurrentPage] = useState(0)
+    const [perPage, setPerPage] = useState(10);
+    const [rows, setRows] = useState<IStockReportList[]>([]);
+    const [totalLength, setTotalLength] = useState(0);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deleteSelected, setDeleteSeleceted] = useState<IStockReportList | null>(null);
+    const showSuccess = searchParams.get('showSuccess');
+    const product = searchParams.get('product');
+    const action = searchParams.get('action');
+
+    const handleChangePage = (event: unknown, newPage: number) => {
+        setCurrentPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setPerPage(+event.target.value);
+        setCurrentPage(0);
+    };
+
+    const handleSearch = async (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            await getProducts()
+        }
+    }
+
+    const handleDeleteSelect = (id: string) => {
+        let selected = rows.find(x => x.product_id == id);
+        if (selected) {
+            setDeleteSeleceted(selected);
+            setShowDeleteDialog(true);
+        }
+    }
+
+    const handleDelete = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}product/${deleteSelected?.product_id}`
+        let response = await fetch(url, {
+            method: "DELETE"
+        });
+        if (response.ok) {
+            handleDeleteClose()
+        }
+    }
+
+    const handleDeleteClose = () => {
+        setShowDeleteDialog(false);
+        getProducts();
+    }
+
+    const getProducts = async () => {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}report/getStockReport?search=${search}&currentPage=${currentPage}&perPage=${perPage}`;
+        let response = await fetch(url);
+        if (response.ok) {
+            let result = await response.json();
+            if (result.data) {
+                const unitHierarchies = await getAllUnitHierarchies();
+                result.data.map((product: IStockReportList) => {
+                    const unitHierarchy = unitHierarchies?.find(x => x.some(y => y.unit_id == product.product_per_bag_unit_id))
+                    if (unitHierarchy) {
+                        const perBagUnitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, product.product_per_bag_unit_id, product.product_per_bag_qty);
+                        let formattedQuantity = calculateQuantityWithHierarchy(perBagUnitHierarchy, [{ unit_id: perBagUnitHierarchy[perBagUnitHierarchy.length - 1]?.unit_id, quantity: product.available_quantity }])
+                        product.available_quantity = formattedQuantity.quantityString
+                    }
+                })
+            }
+
+
+            setRows(result.data);
+            setTotalLength(result.totalLength)
+        } else {
+
+        }
+    }
+
+    useEffect(() => {
+        getProducts();
+    }, [])
+
+    useEffect(() => {
+        getProducts()
+    }, [currentPage, perPage])
+
+    return (
+        <div>
+
+            <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                <Alert severity='success' hidden={!showSuccess}>{`Product ${product} successfully ${action === 'update' ? 'updated' : 'created'}.`}</Alert>
+                <Box sx={{ padding: 2 }}>
+                    <Grid container sx={{ paddingTop: '20px' }}>
+                        <Grid size={6}>
+                            <Typography variant='body1' fontWeight={'bold'}>Stock Report</Typography>
+                        </Grid>
+                        <Grid size={6}>
+                            <div className='flex justify-end'>
+                                <Input
+                                    sx={{ fontSize: '15px' }}
+                                    placeholder='Search...'
+                                    id="input-with-icon-adornment"
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    onKeyUp={(e) => handleSearch(e)}
+                                    endAdornment={
+                                        <InputAdornment position="end">
+                                            <SearchIcon />
+                                        </InputAdornment>
+                                    }
+                                />
+                            </div>
+                        </Grid>
+                    </Grid>
+
+                </Box>
+                <TableContainer sx={{ height: '70vh' }}>
+
+                    <Table aria-label="sticky table" stickyHeader={true}>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>No.</TableCell>
+                                {columns.map((column) => (
+                                    <TableCell
+                                        key={column.id}
+                                        align={column.align}
+                                        style={{ minWidth: column.minWidth }}
+                                    >
+                                        {column.label}
+                                    </TableCell>
+                                ))}
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {rows
+                                .map((row, index) => {
+                                    return (
+                                        <TableRow hover role="checkbox" tabIndex={-1} key={row.product_id}>
+                                            <TableCell>{(currentPage * perPage) + index + 1}</TableCell>
+                                            {columns.map((column) => {
+                                                const value = row[column.id];
+                                                return (
+                                                    <TableCell key={column.id} align={column.align}>
+                                                        {column.id == 'created_on' ? moment(value).format(MOMENT_FORMAT) : value}
+                                                    </TableCell>
+                                                );
+                                            })}
+                                        </TableRow>
+                                    );
+                                })}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                <TablePagination
+                    rowsPerPageOptions={[10, 25, 100]}
+                    component="div"
+                    count={totalLength}
+                    rowsPerPage={perPage}
+                    page={currentPage}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+            </Paper>
+            <DeleteConfirmDialog open={showDeleteDialog} title={deleteSelected?.product_name} handleClose={handleDeleteClose} handleDelete={handleDelete} />
+        </div>
+
+    );
+}

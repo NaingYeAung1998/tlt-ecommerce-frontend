@@ -65,7 +65,7 @@ function AddOrder() {
             let result = await response.json();
             let options: ISelect[] = [];
             result.forEach((customer: ICustomer, index: number) => {
-                let option: ISelect = { value: customer.customer_id, label: `${customer.customer_name}` }
+                let option: ISelect = { value: customer.customer_id, label: `${customer.customer_name} (${customer.customer_address})` }
                 options.push(option);
             })
             setCustomerList(options);

@@ -1,6 +1,6 @@
 "use client"
 
-import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, Inventory as InventoryIcon, ListAlt as ListAltIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
+import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, InsertChart as InsertChartIcon, Inventory as InventoryIcon, ListAlt as ListAltIcon, MonetizationOn as MonetizationOnIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
 import { Box, Collapse, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Typography } from "@mui/material";
 import SidebarButton from "../components/sidebarButton";
 import { FC, useState } from "react";
@@ -14,6 +14,7 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
     const pathname = usePathname();
     const [inventoryCollapse, setInventoryCollapse] = useState(true);
     const [supplierCollapse, setSupplierCollapse] = useState(true);
+    const [reportCollapse, setReportCollapse] = useState(true);
     const [currentRoute, setCurrentRoute] = useState(pathname);
     const router = useRouter();
 
@@ -80,6 +81,19 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
                     <ListItem>
                         <SidebarButton icon={<WarehouseIcon />} label="Warehouse" selected={currentRoute.includes('warehouse')} handleClick={() => handleRoute('/dashboard/warehouse')} />
                     </ListItem>
+
+                    <ListItem >
+                        <SidebarButton handleClick={() => setReportCollapse(!reportCollapse)} icon={<InsertChartIcon />} label="Report" selected={false} isNested={true} isCollapse={reportCollapse} />
+
+                    </ListItem>
+                    <Collapse in={!reportCollapse} timeout="auto" unmountOnExit>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<ListAltIcon />} label="Stock Report" selected={currentRoute.includes('report/stock')} handleClick={() => handleRoute('/dashboard/report/stock')} />
+                        </List>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<MonetizationOnIcon />} label="Sales Report" selected={currentRoute.includes('report/sales')} handleClick={() => handleRoute('/dashboard/report/sales')} />
+                        </List>
+                    </Collapse>
                 </List>
             </nav>
         </Box>
