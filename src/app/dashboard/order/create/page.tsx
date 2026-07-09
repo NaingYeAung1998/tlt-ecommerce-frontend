@@ -9,7 +9,7 @@ import { ISupplier } from "../../supplier/interfaces/supplier.interface";
 import { ISelect } from "@/app/interfaces";
 import { IStockList } from "../../stock/interfaces/stock.interface";
 import { Add as AddIcon, Delete as DeleteIcon, PlusOne } from "@mui/icons-material";
-import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, generateReceiptBufferFromHTML, handleNextFocus } from "@/app/utils";
+import { calculateLowestUnitQuantity, calculateQuantityWithProduct, calculateRoundUpUnit, formatCurrency, generateReceiptBufferFromHTML, handleNextFocus, sleep } from "@/app/utils";
 import { IUnitList } from "../../unit/interfaces/unit.interface";
 import { IOrder, IOrderItem, IOrderItemDisplay, IOrderPayment } from "../interfaces/order.interface";
 import { ICustomer } from "../../customer/interfaces/customer.interface";
@@ -237,59 +237,128 @@ function AddOrder() {
     };
 
     const printViaUSB = async (data: Uint8Array) => {
-        const printers = await navigator.usb.getDevices();
-        let device: any;
-        if (printers.length > 0) {
-            // Use the first already-authorized printer
-            device = printers[0];
-            await device.open();
-            // No popup will appear!
-        } else {
-            // Only show the popup if no device was remembered
-            device = await navigator.usb.requestDevice({ filters: [] });
-        }
-        // Request a USB device (filters can be empty to show all, or specific to your vendor)
-        // const device = await navigator.usb.requestDevice({ filters: [] });
-        if (!device.opened) {
-            await device.open();
+        const device = await navigator.usb.requestDevice({ filters: [] });
+
+        await device.open();
+
+        if (!device.configuration) {
+            await device.selectConfiguration(1);
         }
 
-        // Select configuration (usually 1) and claim interface (usually 0)
-        await device.selectConfiguration(1);
-        await device.claimInterface(0);
+        let selectedInterface: any = null;
+        let selectedAlternate: any = null;
+        let outEndpoint: any = null;
 
-        // Find the Bulk Out endpoint (where we send data to the printer)
-        const outEndpoint = device.configuration?.interfaces[0].alternates[0].endpoints.find(
-            (e: any) => e.direction === 'out' && e.type === 'bulk'
-        );
+        for (const iface of device.configuration!.interfaces) {
+            for (const alt of iface.alternates) {
+                const endpoint = alt.endpoints.find(
+                    (e: any) => e.direction === "out" && e.type === "bulk"
+                );
 
-        if (!outEndpoint) throw new Error("USB Bulk Out endpoint not found");
+                if (endpoint) {
+                    selectedInterface = iface;
+                    selectedAlternate = alt;
+                    outEndpoint = endpoint;
+                    break;
+                }
+            }
 
-        // Send data (USB doesn't usually need chunking like BLE)
-        await device.transferOut(outEndpoint.endpointNumber, data as BufferSource);
+            if (outEndpoint) break;
+        }
+
+        if (!selectedInterface || !selectedAlternate || !outEndpoint) {
+            throw new Error("USB Bulk OUT endpoint not found");
+        }
+
+        await device.claimInterface(selectedInterface.interfaceNumber);
+
+        if (selectedAlternate.alternateSetting !== 0) {
+            await device.selectAlternateInterface(
+                selectedInterface.interfaceNumber,
+                selectedAlternate.alternateSetting
+            );
+        }
+
+        const CHUNK_SIZE = 4096;
+
+        for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+            const chunk = data.slice(i, i + CHUNK_SIZE);
+            await device.transferOut(outEndpoint.endpointNumber, chunk);
+            await sleep(20);
+        }
+
         await device.close();
     };
 
     const printViaBluetooth = async (data: Uint8Array) => {
         const device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+            acceptAllDevices: true,
+            optionalServices: [
+                "000018f0-0000-1000-8000-00805f9b34fb",
+                "0000ffe0-0000-1000-8000-00805f9b34fb",
+                "0000ffe5-0000-1000-8000-00805f9b34fb",
+            ],
         });
+
         const server = await device.gatt?.connect();
-        const service = await server?.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-        const characteristics = await service?.getCharacteristics();
-        const char = characteristics?.find(c => c.properties.write || c.properties.writeWithoutResponse);
+        if (!server) throw new Error("Bluetooth GATT connection failed");
 
-        if (!char) throw new Error("No write characteristic");
+        const services = await server.getPrimaryServices();
 
-        // BLE Chunking (20 bytes at a time)
+        let writeChar: any = null;
+
+        for (const service of services) {
+            const chars = await service.getCharacteristics();
+
+            writeChar =
+                chars.find((c: any) => c.properties.write) ??
+                chars.find((c: any) => c.properties.writeWithoutResponse) ??
+                null;
+
+            if (writeChar) break;
+        }
+
+        if (!writeChar) {
+            throw new Error("Bluetooth write characteristic not found");
+        }
+
         const CHUNK_SIZE = 20;
+
         for (let i = 0; i < data.length; i += CHUNK_SIZE) {
             const chunk = data.slice(i, i + CHUNK_SIZE);
-            await char.writeValueWithoutResponse(chunk);
+
+            if (writeChar.properties.write) {
+                await writeChar.writeValue(chunk);
+            } else {
+                await writeChar.writeValueWithoutResponse(chunk);
+            }
+
+            await sleep(25);
         }
 
         device.gatt?.disconnect();
     };
+
+    // const printViaBluetooth = async (data: Uint8Array) => {
+    //     const device = await navigator.bluetooth.requestDevice({
+    //         filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+    //     });
+    //     const server = await device.gatt?.connect();
+    //     const service = await server?.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+    //     const characteristics = await service?.getCharacteristics();
+    //     const char = characteristics?.find(c => c.properties.write || c.properties.writeWithoutResponse);
+
+    //     if (!char) throw new Error("No write characteristic");
+
+    //     // BLE Chunking (20 bytes at a time)
+    //     const CHUNK_SIZE = 20;
+    //     for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+    //         const chunk = data.slice(i, i + CHUNK_SIZE);
+    //         await char.writeValueWithoutResponse(chunk);
+    //     }
+
+    //     device.gatt?.disconnect();
+    // };
 
 
     const handleAddOrUpdateItem = () => {
