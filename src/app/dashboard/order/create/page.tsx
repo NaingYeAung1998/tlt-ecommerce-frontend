@@ -204,6 +204,30 @@ function AddOrder() {
     //     }
     // };
 
+    const handlePrintTest = async () => {
+        const data = new Uint8Array([
+            0x1b, 0x40,
+            ...new TextEncoder().encode("သလ္လာထွန်း\n"),
+            ...new TextEncoder().encode("ပဲမျိုးစုံရောင်းဝယ်ရေး\n\n\n"),
+        ]);
+
+        try {
+            setPrintStatus("Trying USB connection...");
+            await printViaUSB(data);
+            setPrintStatus("Printed via USB!");
+        } catch (usbError) {
+            console.warn("USB failed or cancelled, trying Bluetooth...", usbError);
+
+            try {
+                setPrintStatus("Trying Bluetooth connection...");
+                await printViaBluetooth(data);
+                setPrintStatus("Printed via Bluetooth!");
+            } catch (btError: any) {
+                setPrintStatus(`Printing failed: ${btError.message}`);
+            }
+        }
+    }
+
     const handlePrint = async () => {
         const orderDisplay = {
             voucher_code: order.voucher_code,
@@ -718,6 +742,7 @@ function AddOrder() {
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
                 <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
                 <Button onClick={() => handlePrint()}>{'Print'}</Button>
+                <Button onClick={() => handlePrintTest()}>{'Print Test'}</Button>
             </div>
 
         </Box>
