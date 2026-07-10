@@ -17,6 +17,7 @@ import OrderItem, { OrderItemDisplay } from "@/app/components/orderItem";
 import { IProductList } from "../../product/interfaces/product.interface";
 import Creatable, { useCreatable } from 'react-select/creatable';
 import { Divider } from "@/app/components/divider";
+import { inspectUsbPrinter, printReceipt } from "@/app/print.util";
 
 function AddOrder() {
 
@@ -240,24 +241,47 @@ function AddOrder() {
             paid_amount: paymentTotal,
             change_amount: totalPrice - paymentTotal
         }
-        const data = await generateReceiptBufferFromHTML(orderDisplay);
-        console.log(data);
-
         try {
-            setPrintStatus("Trying USB connection...");
-            await printViaUSB(data);
-            setPrintStatus("Printed via USB!");
-        } catch (usbError) {
-            console.warn("USB failed or cancelled, trying Bluetooth...", usbError);
+            setPrintStatus("Printing...");
 
-            try {
-                setPrintStatus("Trying Bluetooth connection...");
-                await printViaBluetooth(data);
-                setPrintStatus("Printed via Bluetooth!");
-            } catch (btError: any) {
-                setPrintStatus(`Printing failed: ${btError.message}`);
-            }
+            const transport = await printReceipt(
+                orderDisplay,
+                "usb"
+            );
+
+            setPrintStatus(
+                `Printed successfully via ${transport.toUpperCase()}`
+            );
+        } catch (error) {
+            console.error(error);
+            await inspectUsbPrinter();
+            setPrintStatus(
+                `Print failed: ${error instanceof Error
+                    ? error.message
+                    : String(error)
+                }`
+            );
         }
+
+        // Old printing method
+        // const data = await generateReceiptBufferFromHTML(orderDisplay);
+        // console.log(data);
+
+        // try {
+        //     setPrintStatus("Trying USB connection...");
+        //     await printViaUSB(data);
+        //     setPrintStatus("Printed via USB!");
+        // } catch (usbError) {
+        //     console.warn("USB failed or cancelled, trying Bluetooth...", usbError);
+
+        //     try {
+        //         setPrintStatus("Trying Bluetooth connection...");
+        //         await printViaBluetooth(data);
+        //         setPrintStatus("Printed via Bluetooth!");
+        //     } catch (btError: any) {
+        //         setPrintStatus(`Printing failed: ${btError.message}`);
+        //     }
+        // }
     };
 
     const printViaUSB = async (data: Uint8Array) => {
