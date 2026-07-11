@@ -18,8 +18,16 @@ import { IProductList } from "../../product/interfaces/product.interface";
 import Creatable, { useCreatable } from 'react-select/creatable';
 import { Divider } from "@/app/components/divider";
 import { inspectUsbPrinter, printReceipt } from "@/app/print.util";
+import PrintableReceipt from "@/app/components/printableReceipt";
+import { useReactToPrint } from 'react-to-print';
 
 function AddOrder() {
+
+    const receiptRef = useRef<HTMLDivElement>(null);
+
+    const handleSystemPrint = useReactToPrint({
+        contentRef: receiptRef,
+    });
 
     let today = new Date();
     const searchParams = useSearchParams();
@@ -529,6 +537,21 @@ function AddOrder() {
         }
     }
 
+    const convertToOrderDisplay = () => {
+        const orderDisplay = {
+            voucher_code: order.voucher_code,
+            customer_name: customer?.label,
+            customer_address: order.address,
+            order_items: orderItems,
+            date: order.order_date,
+            total: totalPrice,
+            otherCharges: order.other_charges ?? '0',
+            paid_amount: paymentTotal,
+            change_amount: totalPrice - paymentTotal
+        }
+        return orderDisplay;
+    }
+
     useEffect(() => {
         getCustomerList()
         getProductList()
@@ -543,6 +566,14 @@ function AddOrder() {
 
     return (
         <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px', overflowY: 'auto', height: '95vh', width: '100%' }}>
+            <div style={{
+                position: "fixed",
+                left: "-10000px",
+                top: 0,
+            }}>
+                <PrintableReceipt order={convertToOrderDisplay()} ref={receiptRef} />
+            </div>
+
             <Alert severity="error" hidden={!showError}>{`Failed to create Voucher.`}</Alert>
             <br />
 
@@ -763,7 +794,7 @@ function AddOrder() {
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
                 <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
-                <Button onClick={() => handlePrint()}>{'Print'}</Button>
+                <Button onClick={() => handleSystemPrint()}>{'Print'}</Button>
                 <Button onClick={() => handlePrintTest()}>{'Print Test'}</Button>
             </div>
 

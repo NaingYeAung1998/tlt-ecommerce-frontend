@@ -1087,28 +1087,6 @@ export const generateHybridReceipt = async (
     );
 
     /*
-     * Totals:
-     * labels as one compact Myanmar image;
-     * numbers as native text.
-     */
-    const labels = await renderMyanmarBlock(
-        [
-            "အခြား",
-            "စုစုပေါင်း",
-            "ပေးငွေ",
-            "ကျန်ငွေ"
-        ],
-        {
-            fontSize: 25,
-            lineHeight: 48,
-            align: "left",
-            paddingX: 20
-        }
-    );
-
-    output.push(labels);
-
-    /*
      * If exact same-line totals are required, render each total
      * row as an image instead. Otherwise, print numbers natively.
      */
