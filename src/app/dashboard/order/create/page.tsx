@@ -118,7 +118,6 @@ function AddOrder() {
         data.other_charges = data.other_charges || "0";
         data.order_date = orderDate;
 
-        console.log(data);
         if (id) {
             const url = process.env.NEXT_PUBLIC_BACKEND_URL + "order/" + id
             let response = await fetch(url, {
@@ -423,7 +422,6 @@ function AddOrder() {
             currentOrderItems.push(currentItem);
             setOrderItems(currentOrderItems);
             setItem(initItem(currentOrderItems.length))
-            console.log(item)
         }
         if (itemRef && itemRef.current) {
             itemRef.current.focus()
@@ -438,7 +436,6 @@ function AddOrder() {
         const currentItems = [...orderItems];
         const item = currentItems.find(x => x.item_id == id);
         if (item) {
-            console.log(item)
             setItem(item)
         }
     }

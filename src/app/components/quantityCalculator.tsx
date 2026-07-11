@@ -50,6 +50,7 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
             updateParent(lowestQty.quantity, lowestQty.unit_id)
         } else {
             setRoundupQuantityString("")
+            setQuantityList([]);
             updateParent(0, parentUnitId)
         }
     }

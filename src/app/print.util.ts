@@ -725,7 +725,6 @@ export const printReceipt = async (
 ): Promise<PrintTransport> => {
     const receiptData =
         await generateHybridReceipt(order);
-    console.log(receiptData)
     if (preferredTransport === "usb") {
         try {
             const authorizedDevices =
