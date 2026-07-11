@@ -1,4 +1,4 @@
-import Rabbit from "rabbit-node";
+
 
 /* =========================================================
    TYPES
@@ -58,9 +58,6 @@ const sleep = (milliseconds: number): Promise<void> =>
 const toBytes = (...values: number[]): Uint8Array =>
     new Uint8Array(values);
 
-const encodeText = (value: string): Uint8Array =>
-    encoder.encode(value);
-
 const concatUint8Arrays = (parts: Uint8Array[]): Uint8Array => {
     const totalLength = parts.reduce(
         (length, part) => length + part.byteLength,
@@ -78,24 +75,6 @@ const concatUint8Arrays = (parts: Uint8Array[]): Uint8Array => {
 
     return result;
 };
-
-const initializePrinter = (): Uint8Array =>
-    toBytes(ESC, 0x40);
-
-const alignLeft = (): Uint8Array =>
-    toBytes(ESC, 0x61, 0x00);
-
-const alignCenter = (): Uint8Array =>
-    toBytes(ESC, 0x61, 0x01);
-
-const alignRight = (): Uint8Array =>
-    toBytes(ESC, 0x61, 0x02);
-
-const boldOn = (): Uint8Array =>
-    toBytes(ESC, 0x45, 0x01);
-
-const boldOff = (): Uint8Array =>
-    toBytes(ESC, 0x45, 0x00);
 
 /*
  * GS ! n
@@ -117,9 +96,6 @@ const doubleWidthText = (): Uint8Array =>
 const doubleWidthHeightText = (): Uint8Array =>
     toBytes(GS, 0x21, 0x11);
 
-const feedLines = (lineCount: number): Uint8Array =>
-    toBytes(ESC, 0x64, Math.max(0, Math.min(255, lineCount)));
-
 const partialCut = (): Uint8Array =>
     toBytes(GS, 0x56, 0x01);
 
@@ -140,33 +116,14 @@ const normalizeText = (value: unknown): string => {
     return String(value);
 };
 
-const formatMoney = (value: unknown): string => {
-    const numberValue = Number(value ?? 0);
-
-    if (!Number.isFinite(numberValue)) {
-        return "0";
-    }
-
-    return numberValue.toLocaleString("en-US", {
-        maximumFractionDigits: 2,
-    });
-};
-
 const containsMyanmar = (value: string): boolean =>
     /[\u1000-\u109f\uAA60-\uAA7F]/.test(value);
 
-const encodePrinterText = (value: unknown): Uint8Array => {
-    const text = value == null ? "" : String(value);
-
-    const converted = containsMyanmar(text)
-        ? Rabbit.uni2zg(text)
-        : text;
-
-    return encoder.encode(converted);
-};
+const encodeText = (value: unknown): Uint8Array =>
+    encoder.encode(value == null ? "" : String(value));
 
 const line = (value = ""): Uint8Array =>
-    encodePrinterText(`${value}\n`);
+    encodeText(`${value}\n`);
 
 const separator = (
     character = "-",
@@ -215,139 +172,159 @@ const buildTotalLine = (
     return `${padRight(label, labelWidth)}${padLeft(amount, valueWidth)}`;
 };
 
+const command = (...values: number[]): Uint8Array =>
+    new Uint8Array(values);
+
+const initialize = (): Uint8Array =>
+    command(ESC, 0x40);
+
+const alignLeft = (): Uint8Array =>
+    command(ESC, 0x61, 0x00);
+
+const alignCenter = (): Uint8Array =>
+    command(ESC, 0x61, 0x01);
+
+const alignRight = (): Uint8Array =>
+    command(ESC, 0x61, 0x02);
+
+const normalSize = (): Uint8Array =>
+    command(GS, 0x21, 0x00);
+
+const boldOff = (): Uint8Array =>
+    command(ESC, 0x45, 0x00);
+
+const feedLines = (count: number): Uint8Array =>
+    command(ESC, 0x64, count);
+
+const cut = (): Uint8Array =>
+    command(GS, 0x56, 0x41, 0x00);
+
+const formatMoney = (value: unknown): string => {
+    const numberValue = Number(value ?? 0);
+
+    return Number.isFinite(numberValue)
+        ? numberValue.toLocaleString("en-US")
+        : "0";
+};
+
+const concatBytes = (parts: Uint8Array[]): Uint8Array => {
+    const totalLength = parts.reduce(
+        (total, part) => total + part.byteLength,
+        0
+    );
+
+    const result = new Uint8Array(totalLength);
+
+    let offset = 0;
+
+    for (const part of parts) {
+        result.set(part, offset);
+        offset += part.byteLength;
+    }
+
+    return result;
+};
+
 export const generateNativeUtf8Receipt = (
     order: ThermalOrder
 ): Uint8Array => {
-    const commands: Uint8Array[] = [];
-
-    commands.push(initializePrinter());
-    commands.push(setDefaultLineSpacing());
-    commands.push(normalTextSize());
-    commands.push(boldOff());
+    const output: Uint8Array[] = [];
 
     /*
-     * Voucher code
+     * Keep the printer in the same default mode used by printTest.
      */
-    commands.push(alignRight());
-    commands.push(boldOn());
-    commands.push(line(order.voucher_code ?? "VC0001"));
-    commands.push(boldOff());
+    output.push(initialize());
+    output.push(normalSize());
+    output.push(boldOff());
 
-    /*
-     * Store header
-     */
-    commands.push(alignCenter());
-    commands.push(doubleWidthHeightText());
-    commands.push(boldOn());
-    commands.push(line("သလ္လာထွန်း"));
+    // Voucher
+    output.push(alignRight());
+    output.push(line(order.voucher_code ?? "VC0001"));
 
-    commands.push(normalTextSize());
-    commands.push(boldOff());
-    commands.push(line("ပဲမျိုးစုံရောင်းဝယ်ရေး"));
-    commands.push(line("၈၇လမ်း၊ ၂၇x၂၈ကြား၊ မန္တလေးမြို့။"));
-    commands.push(line("09 2032794 | 09 793043753 | 09 779699003"));
+    // Header: plain Unicode, no Rabbit, no bold, no double size
+    output.push(alignCenter());
+    output.push(line("သလ္လာထွန်း"));
+    output.push(line("ပဲမျိုးစုံရောင်းဝယ်ရေး"));
+    output.push(line("၈၇လမ်း၊ ၂၇x၂၈ကြား၊ မန္တလေးမြို့။"));
+    output.push(line("09 2032794 | 09 793043753 | 09 779699003"));
+    output.push(line(`Date : ${order.date ?? ""}`));
 
-    commands.push(feedLines(1));
-    commands.push(line(`Date : ${normalizeText(order.date)}`));
+    output.push(feedLines(1));
 
-    /*
-     * Customer information
-     */
-    commands.push(feedLines(1));
-    commands.push(alignLeft());
-    commands.push(line(`အမည် - ${normalizeText(order.customer_name)}`));
-    commands.push(line(`လိပ်စာ - ${normalizeText(order.customer_address)}`));
+    // Customer
+    output.push(alignLeft());
+    output.push(line(`အမည် - ${order.customer_name ?? ""}`));
+    output.push(line(`လိပ်စာ - ${order.customer_address ?? ""}`));
 
-    /*
-     * Invoice heading
-     */
-    commands.push(feedLines(1));
-    commands.push(alignCenter());
-    commands.push(doubleHeightText());
-    commands.push(boldOn());
-    commands.push(line("INVOICE"));
-    commands.push(normalTextSize());
-    commands.push(boldOff());
+    output.push(feedLines(1));
 
-    commands.push(separator("-"));
+    // English title
+    output.push(alignCenter());
+    output.push(line("INVOICE"));
+    output.push(line("-----------------------------------------------"));
 
-    /*
-     * Items
-     *
-     * Product names are placed on a separate line because Myanmar
-     * characters do not map reliably to fixed-width JS columns.
-     *
-     * Quantity and price remain aligned using native ASCII columns.
-     */
-    commands.push(alignLeft());
+    // Items
+    output.push(alignLeft());
 
     for (const item of order.order_items ?? []) {
-        const productName = normalizeText(item.product_name);
-        const quantity = normalizeText(item.unit_quantity);
+        /*
+         * Myanmar product name must not be sliced or padded.
+         */
+        output.push(line(item.product_name ?? ""));
+
+        /*
+         * Quantity and price contain mostly ASCII, so spacing is safe.
+         */
+        const quantity = String(item.unit_quantity ?? "");
         const price = formatMoney(item.selling_price);
 
-        commands.push(boldOn());
-        commands.push(line(productName));
-        commands.push(boldOff());
+        output.push(
+            line(
+                `${quantity.padStart(18, " ")}${price.padStart(28, " ")}`
+            )
+        );
 
-        commands.push(line(buildNumericItemLine(quantity, price)));
+        output.push(feedLines(1));
     }
 
-    commands.push(separator("-"));
-
-    /*
-     * Totals
-     */
-    commands.push(
-        line(
-            buildTotalLine(
-                "အခြား",
-                formatMoney(order.other_charges)
-            )
-        )
-    );
-
-    commands.push(
-        line(
-            buildTotalLine(
-                "စုစုပေါင်း",
-                formatMoney(order.total)
-            )
-        )
-    );
-
-    commands.push(
-        line(
-            buildTotalLine(
-                "ပေးငွေ",
-                formatMoney(order.paid_amount)
-            )
-        )
-    );
-
-    commands.push(
-        line(
-            buildTotalLine(
-                "ကျန်ငွေ",
-                formatMoney(order.change_amount)
-            )
-        )
+    output.push(
+        line("-----------------------------------------------")
     );
 
     /*
-     * Footer
+     * Do not pad Myanmar labels with JS string-width calculations.
+     * Use label on the left and value on the next line/right side.
      */
-    commands.push(feedLines(2));
-    commands.push(alignCenter());
-    commands.push(line("*ဝယ်ယူအားပေးမှုကို"));
-    commands.push(line("ကျေးဇူးအထူးတင်ရှိပါသည်*"));
+    output.push(alignLeft());
+    output.push(line("အခြား"));
+    output.push(alignRight());
+    output.push(line(formatMoney(order.other_charges)));
 
-    commands.push(normalTextSize());
-    commands.push(boldOff());
-    commands.push(feedLines(5));
-    commands.push(partialCut());
+    output.push(alignLeft());
+    output.push(line("စုစုပေါင်း"));
+    output.push(alignRight());
+    output.push(line(formatMoney(order.total)));
 
-    return concatUint8Arrays(commands);
+    output.push(alignLeft());
+    output.push(line("ပေးငွေ"));
+    output.push(alignRight());
+    output.push(line(formatMoney(order.paid_amount)));
+
+    output.push(alignLeft());
+    output.push(line("ကျန်ငွေ"));
+    output.push(alignRight());
+    output.push(line(formatMoney(order.change_amount)));
+
+    // Footer
+    output.push(feedLines(2));
+    output.push(alignCenter());
+    output.push(line("*ဝယ်ယူအားပေးမှုကို"));
+    output.push(line("ကျေးဇူးအထူးတင်ရှိပါသည်*"));
+
+    output.push(feedLines(5));
+    output.push(cut());
+
+    return concatBytes(output);
 };
 
 interface UsbPrintEndpoint {
