@@ -1,3 +1,5 @@
+import Rabbit from "rabbit-node";
+
 /* =========================================================
    TYPES
 ========================================================= */
@@ -150,8 +152,21 @@ const formatMoney = (value: unknown): string => {
     });
 };
 
+const containsMyanmar = (value: string): boolean =>
+    /[\u1000-\u109f\uAA60-\uAA7F]/.test(value);
+
+const encodePrinterText = (value: unknown): Uint8Array => {
+    const text = value == null ? "" : String(value);
+
+    const converted = containsMyanmar(text)
+        ? Rabbit.uni2zg(text)
+        : text;
+
+    return encoder.encode(converted);
+};
+
 const line = (value = ""): Uint8Array =>
-    encodeText(`${value}\n`);
+    encodePrinterText(`${value}\n`);
 
 const separator = (
     character = "-",
