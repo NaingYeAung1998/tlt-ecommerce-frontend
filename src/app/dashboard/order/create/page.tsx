@@ -423,6 +423,7 @@ function AddOrder() {
             currentOrderItems.push(currentItem);
             setOrderItems(currentOrderItems);
             setItem(initItem(currentOrderItems.length))
+            console.log(item)
         }
         if (itemRef && itemRef.current) {
             itemRef.current.focus()

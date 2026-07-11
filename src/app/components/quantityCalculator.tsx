@@ -24,7 +24,7 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
 
     useEffect(() => {
         calculateQuantity(true);
-    }, [parentId])
+    }, [parentId, parentQty])
 
     const calculateQuantity = (isParentChanging: boolean) => {
         if ((parentQty && parentQty > 0) || (quantityList.length > 0 && !isParentChanging)) {

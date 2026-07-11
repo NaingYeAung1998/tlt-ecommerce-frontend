@@ -724,7 +724,8 @@ export const printReceipt = async (
     preferredTransport: PrintTransport = "usb"
 ): Promise<PrintTransport> => {
     const receiptData =
-        generateNativeUtf8Receipt(order);
+        await generateHybridReceipt(order);
+    console.log(receiptData)
     if (preferredTransport === "usb") {
         try {
             const authorizedDevices =
@@ -830,4 +831,384 @@ export const inspectUsbPrinter = async (): Promise<void> => {
     }
 
     await device.close();
+};
+
+
+const PRINTER_WIDTH = 576;
+
+const renderMyanmarBlock = async (
+    lines: string[],
+    options: {
+        fontSize?: number;
+        lineHeight?: number;
+        align?: "left" | "center" | "right";
+        bold?: boolean;
+        paddingX?: number;
+    } = {}
+): Promise<Uint8Array> => {
+    const fontSize = options.fontSize ?? 28;
+    const lineHeight = options.lineHeight ?? Math.ceil(fontSize * 1.45);
+    const align = options.align ?? "left";
+    const paddingX = options.paddingX ?? 20;
+    const bold = options.bold ?? false;
+
+    await document.fonts.ready;
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = PRINTER_WIDTH;
+    canvas.height = Math.max(
+        1,
+        lines.length * lineHeight + 12
+    );
+
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+        throw new Error("Canvas context is unavailable");
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#000000";
+    ctx.textBaseline = "top";
+    ctx.font = `${bold ? "700" : "400"} ${fontSize}px "Pyidaungsu", "Myanmar Text", "Noto Sans Myanmar", sans-serif`;
+
+    lines.forEach((value, index) => {
+        const width = ctx.measureText(value).width;
+
+        let x = paddingX;
+
+        if (align === "center") {
+            x = (PRINTER_WIDTH - width) / 2;
+        } else if (align === "right") {
+            x = PRINTER_WIDTH - width - paddingX;
+        }
+
+        ctx.fillText(value, x, index * lineHeight + 4);
+    });
+
+    return canvasToRasterCommand(canvas);
+};
+
+const canvasToRasterCommand = (
+    canvas: HTMLCanvasElement
+): Uint8Array => {
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+        throw new Error("Canvas context is unavailable");
+    }
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const widthBytes = Math.ceil(width / 8);
+
+    const image = ctx.getImageData(0, 0, width, height);
+    const output: number[] = [];
+
+    // GS v 0
+    output.push(
+        GS,
+        0x76,
+        0x30,
+        0x00,
+        widthBytes & 0xff,
+        (widthBytes >> 8) & 0xff,
+        height & 0xff,
+        (height >> 8) & 0xff
+    );
+
+    for (let y = 0; y < height; y++) {
+        for (let byteX = 0; byteX < widthBytes; byteX++) {
+            let byteValue = 0;
+
+            for (let bit = 0; bit < 8; bit++) {
+                const x = byteX * 8 + bit;
+
+                if (x >= width) {
+                    continue;
+                }
+
+                const index = (y * width + x) * 4;
+
+                const r = image.data[index];
+                const g = image.data[index + 1];
+                const b = image.data[index + 2];
+                const alpha = image.data[index + 3];
+
+                const luminance =
+                    0.299 * r +
+                    0.587 * g +
+                    0.114 * b;
+
+                if (alpha > 128 && luminance < 175) {
+                    byteValue |= 1 << (7 - bit);
+                }
+            }
+
+            output.push(byteValue);
+        }
+    }
+
+    return new Uint8Array(output);
+};
+
+const textLine = (value = ""): Uint8Array =>
+    encoder.encode(`${value}\n`);
+
+export const generateHybridReceipt = async (
+    order: any
+): Promise<Uint8Array> => {
+    const output: Uint8Array[] = [];
+
+    output.push(initialize());
+
+    /*
+     * Voucher number: native text
+     */
+    output.push(alignRight());
+    output.push(
+        textLine(order?.voucher_code ?? "VC0001")
+    );
+
+    /*
+     * Store header: bitmap so font and shaping match
+     */
+    output.push(
+        await renderMyanmarBlock(
+            ["သလ္လာထွန်း"],
+            {
+                fontSize: 46,
+                lineHeight: 58,
+                align: "center",
+                bold: true
+            }
+        )
+    );
+
+    output.push(
+        await renderMyanmarBlock(
+            [
+                "ပဲမျိုးစုံရောင်းဝယ်ရေး",
+                "၈၇လမ်း၊ ၂၇x၂၈ကြား၊ မန္တလေးမြို့။"
+            ],
+            {
+                fontSize: 28,
+                lineHeight: 42,
+                align: "center"
+            }
+        )
+    );
+
+    /*
+     * Phone and date: native and fast
+     */
+    output.push(alignCenter());
+    output.push(
+        textLine(
+            "09 2032794 | 09 793043753 | 09 779699003"
+        )
+    );
+
+    output.push(
+        textLine(`Date : ${order?.date ?? ""}`)
+    );
+
+    output.push(feedLines(1));
+
+    /*
+     * Customer details: Myanmar bitmap
+     */
+    output.push(
+        await renderMyanmarBlock(
+            [
+                `အမည် - ${order?.customer_name ?? ""}`,
+                `လိပ်စာ - ${order?.customer_address ?? ""}`
+            ],
+            {
+                fontSize: 27,
+                lineHeight: 42,
+                align: "left",
+                paddingX: 25
+            }
+        )
+    );
+
+    output.push(feedLines(1));
+
+    /*
+     * Invoice heading: native
+     */
+    output.push(alignCenter());
+    output.push(textLine("INVOICE"));
+    output.push(
+        textLine("-----------------------------------------------")
+    );
+
+    /*
+     * Products
+     */
+    for (const item of order?.order_items ?? []) {
+        output.push(
+            await renderMyanmarBlock(
+                [item?.product_name ?? ""],
+                {
+                    fontSize: 25,
+                    lineHeight: 38,
+                    align: "left",
+                    paddingX: 20
+                }
+            )
+        );
+
+        const quantity = String(
+            item?.unit_quantity ?? ""
+        );
+
+        const price = Number(
+            item?.selling_price ?? 0
+        ).toLocaleString("en-US");
+
+        output.push(alignLeft());
+
+        output.push(
+            textLine(
+                quantity.padStart(22, " ") +
+                price.padStart(24, " ")
+            )
+        );
+
+        output.push(feedLines(1));
+    }
+
+    output.push(
+        textLine("-----------------------------------------------")
+    );
+
+    /*
+     * Totals:
+     * labels as one compact Myanmar image;
+     * numbers as native text.
+     */
+    const labels = await renderMyanmarBlock(
+        [
+            "အခြား",
+            "စုစုပေါင်း",
+            "ပေးငွေ",
+            "ကျန်ငွေ"
+        ],
+        {
+            fontSize: 25,
+            lineHeight: 48,
+            align: "left",
+            paddingX: 20
+        }
+    );
+
+    output.push(labels);
+
+    /*
+     * If exact same-line totals are required, render each total
+     * row as an image instead. Otherwise, print numbers natively.
+     */
+    output.push(alignRight());
+
+    output.push(
+        await renderTotalRow(
+            "အခြား",
+            Number(order?.other_charges ?? 0)
+                .toLocaleString("en-US")
+        )
+    );
+
+    output.push(
+        await renderTotalRow(
+            "စုစုပေါင်း",
+            Number(order?.total ?? 0)
+                .toLocaleString("en-US")
+        )
+    );
+
+    output.push(
+        await renderTotalRow(
+            "ပေးငွေ",
+            Number(order?.paid_amount ?? 0)
+                .toLocaleString("en-US")
+        )
+    );
+
+    output.push(
+        await renderTotalRow(
+            "ကျန်ငွေ",
+            Number(order?.change_amount ?? 0)
+                .toLocaleString("en-US")
+        )
+    );
+
+    output.push(feedLines(2));
+
+    /*
+     * Footer bitmap
+     */
+    output.push(
+        await renderMyanmarBlock(
+            [
+                "*ဝယ်ယူအားပေးမှုကို",
+                "ကျေးဇူးအထူးတင်ရှိပါသည်*"
+            ],
+            {
+                fontSize: 27,
+                lineHeight: 42,
+                align: "center"
+            }
+        )
+    );
+
+    output.push(feedLines(4));
+    output.push(cut());
+
+    return concatBytes(output);
+};
+
+const renderTotalRow = async (
+    label: string,
+    value: string
+): Promise<Uint8Array> => {
+    await document.fonts.ready;
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = PRINTER_WIDTH;
+    canvas.height = 50;
+
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+        throw new Error("Canvas context unavailable");
+    }
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#000000";
+    ctx.textBaseline = "top";
+
+    ctx.font =
+        `25px "Pyidaungsu", "Myanmar Text", "Noto Sans Myanmar", sans-serif`;
+
+    ctx.fillText(label, 20, 5);
+
+    ctx.font = `24px monospace`;
+
+    const valueWidth = ctx.measureText(value).width;
+
+    ctx.fillText(
+        value,
+        PRINTER_WIDTH - valueWidth - 20,
+        5
+    );
+
+    return canvasToRasterCommand(canvas);
 };
