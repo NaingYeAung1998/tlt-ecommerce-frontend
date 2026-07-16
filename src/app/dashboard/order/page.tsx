@@ -118,8 +118,8 @@ export default function Orders() {
             let result = await response.json();
             result.data.forEach((order: any) => {
                 order.customer_name = order.customer_name ? order.customer_name : order.customer_relation_name
-                order.total_unpaid = formatCurrency(parseFloat(order.total_amount) + parseFloat(order.other_charges) - parseFloat(order.total_paid))
-                order.total_amount = formatCurrency(parseFloat(order.total_amount) + parseFloat(order.other_charges))
+                order.total_unpaid = formatCurrency(parseFloat(order.total_amount) + parseFloat(order.other_charges ?? 0) - parseFloat(order.total_paid ?? 0))
+                order.total_amount = formatCurrency(parseFloat(order.total_amount) + parseFloat(order.other_charges ?? 0))
             })
             setRows(result.data);
             setTotalLength(result.totalLength)
@@ -690,6 +690,30 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                 {trackItems.map((track: any) => track.track_id).includes(trackItem.track_id) ? <Button variant="outlined" color="warning" onClick={() => setTrackItem(initItem(trackItems.length, [...trackItems]))}>Cancel</Button> : <></>}
                                 <Button variant="contained" color="primary" onClick={() => handleAddOrUpdateItem()}>{trackItems.map((track: any) => track.track_id).includes(trackItem.track_id) ? 'Update' : 'Add'}</Button>
                             </div>
+                            <div className="p-[20px]">
+
+                            </div>
+                            <Typography variant="body1" fontWeight={'bold'}>Untracked Items</Typography>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>Product</TableCell>
+                                        <TableCell>Quantity</TableCell>
+
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {
+                                        orderItems.sort((a, b) => b.availableQuantity - a.availableQuantity).map((item: any, index: number) =>
+                                            <TableRow>
+                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{item.product?.product_name}</Typography></TableCell>
+                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{item.quantityString}</Typography></TableCell>
+                                            </TableRow>
+                                        )
+
+                                    }
+                                </TableBody>
+                            </Table>
                             <div className="p-[20px]">
 
                             </div>

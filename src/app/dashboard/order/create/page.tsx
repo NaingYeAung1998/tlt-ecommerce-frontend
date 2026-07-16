@@ -732,8 +732,14 @@ function AddOrder() {
                                         <>
                                             <TableRow>
                                                 <TableCell colSpan={2}></TableCell>
+                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>Other Charges</Typography></TableCell>
+                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(parseFloat(order.other_charges ?? 0))}</Typography></TableCell>
+                                                <TableCell></TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                                <TableCell colSpan={2}></TableCell>
                                                 <TableCell><Typography variant="body2" fontWeight={'bold'}>Total Amount</Typography></TableCell>
-                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(totalPrice)}</Typography></TableCell>
+                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(totalPrice - parseFloat(order.other_charges ?? 0))}</Typography></TableCell>
                                                 <TableCell></TableCell>
                                             </TableRow>
                                             {
@@ -758,7 +764,8 @@ function AddOrder() {
                                                         {
                                                             payments.map((payment: any, index: number) =>
                                                                 <TableRow>
-                                                                    <TableCell colSpan={2}></TableCell>
+                                                                    <TableCell></TableCell>
+                                                                    <TableCell><Typography variant="body2" fontWeight={'bold'}>Payments</Typography></TableCell>
                                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{payment.payment_date}</Typography></TableCell>
                                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(payment.amount)}</Typography></TableCell>
                                                                     <TableCell></TableCell>
