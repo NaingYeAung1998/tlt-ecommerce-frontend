@@ -24,7 +24,7 @@ import { ISelect } from '@/app/interfaces';
 import QuantityCalculator from '@/app/components/quantityCalculator';
 
 interface Column {
-    id: 'voucher_code' | 'customer_name' | 'total_amount' | 'total_paid' | 'created_on';
+    id: 'voucher_code' | 'customer_name' | 'total_amount' | 'total_unpaid' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -40,8 +40,8 @@ const columns: readonly Column[] = [
         align: 'left',
     },
     {
-        id: 'total_paid',
-        label: 'Total Paid',
+        id: 'total_unpaid',
+        label: 'Total Unpaid',
         minWidth: 170,
         align: 'left',
 
@@ -118,8 +118,8 @@ export default function Orders() {
             let result = await response.json();
             result.data.forEach((order: any) => {
                 order.customer_name = order.customer_name ? order.customer_name : order.customer_relation_name
+                order.total_unpaid = formatCurrency(parseFloat(order.total_amount) + parseFloat(order.other_charges) - parseFloat(order.total_paid))
                 order.total_amount = formatCurrency(parseFloat(order.total_amount) + parseFloat(order.other_charges))
-                order.total_paid = formatCurrency(order.total_paid)
             })
             setRows(result.data);
             setTotalLength(result.totalLength)
@@ -269,7 +269,8 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
         if (response.ok) {
             let result = await response.json();
             if (result.items) {
-                const amount = result.items.reduce((prev: any, current: any) => prev + parseFloat(current.selling_price), 0)
+                let amount = result.items.reduce((prev: any, current: any) => prev + parseFloat(current.selling_price), 0)
+                amount += parseFloat(result.other_charges);
                 setTotalAmount(amount);
             }
             setOrder(result);
@@ -307,7 +308,7 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
             currentPayments[index] = currentPayment;
             setPayments(currentPayments);
             setPayment(initPayment(currentPayments.length));
-        } {
+        } else {
             currentPayments.push(currentPayment);
             setPayments(currentPayments);
             setPayment(initPayment(currentPayments.length));
@@ -396,7 +397,10 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
 
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{payment.payment_date}</Typography></TableCell>
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(payment.amount)}</Typography></TableCell>
-                                                    <TableCell></TableCell>
+                                                    <TableCell>
+                                                        <IconButton color='default' onClick={() => handleEditPayment(payment.order_payment_id)}><Edit /></IconButton>
+                                                        <IconButton color='warning' onClick={() => handleDeletePayment(payment.order_payment_id)}><Delete /></IconButton>
+                                                    </TableCell>
                                                 </TableRow>
                                             )
 
@@ -443,7 +447,6 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
         if (length == 0) {
             return { track_id: (length + 1).toString(), item: { unitHierarchy: [] }, checked_date: today.toISOString().split('T')[0] }
         } else {
-            console.log(trackItems)
             return { track_id: (parseFloat(currentItems[currentItems.length - 1].track_id) + 1).toString(), item: { unitHierarchy: [] }, checked_date: today.toISOString().split('T')[0] }
         }
 
@@ -451,6 +454,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
     const [orderItems, setOrderItems] = useState<any[]>([]);
     const [trackItem, setTrackItem] = useState<any>(initItem(0));
     const [trackItems, setTrackItems] = useState<any[]>([]);
+    const [allUnitHierarchies, setAllUnitHierarchies] = useState<any[][]>([]);
     const productOptions: ISelect[] = orderItems.map((item, index) => { return { label: item.product?.product_name, value: item.product?.product_id } });
     const productOption: ISelect | null = trackItem ? { label: trackItem.item.product?.product_name, value: trackItem.item.product?.product_id } : null;
 
@@ -488,7 +492,6 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                     trackItemsModel.push(trackItemModel)
                 })
             })
-            console.log(trackItemsModel)
             setTrackItems(trackItemsModel)
         }
     }
@@ -499,11 +502,16 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
         if (response.ok) {
             let result = await response.json();
             const unitHierarchies = await getAllUnitHierarchies();
+            if (unitHierarchies) {
+                setAllUnitHierarchies(unitHierarchies);
+            }
+
             result.map((item: any) => {
                 const unitHierarchy = unitHierarchies?.find(x => x.some(y => y.unit_id == item.product?.per_bag_unit?.unit_id))
                 if (unitHierarchy) {
                     const perBagUnitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, item.product?.per_bag_unit?.unit_id, item.product?.quantity_per_bag);
                     let formattedQuantity = calculateQuantityWithHierarchy(perBagUnitHierarchy, [{ unit_id: item.unit?.unit_id, quantity: item.quantity }])
+                    item.availableQuantity = item.quantity;
                     item.quantityString = formattedQuantity.quantityString;
                     item.unitHierarchy = unitHierarchy
                 }
@@ -515,12 +523,32 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
 
     }
 
+    const refreshOrderItems = () => {
+        const orderItemsCloned = [...orderItems]
+        const trackItemsCloned = [...trackItems];
+
+        orderItemsCloned.map((item) => {
+            let addedTrackItemTotalQty = trackItemsCloned.filter(x => x.item?.product?.product_id == item.product?.product_id).reduce((p, c) => p += parseFloat(c.quantity), 0);
+            item.availableQuantity = item.quantity - addedTrackItemTotalQty;
+            const unitHierarchies = allUnitHierarchies;
+            const unitHierarchy = item.uniHierarchy ?? unitHierarchies?.find(x => x.some(y => y.unit_id == item.product?.per_bag_unit?.unit_id))
+            if (unitHierarchy) {
+                const perBagUnitHierarchy = bindPerBagUnitHierarchy(unitHierarchy, item.product?.per_bag_unit?.unit_id, item.product?.quantity_per_bag);
+                let formattedQuantity = calculateQuantityWithHierarchy(perBagUnitHierarchy, [{ unit_id: item.unit?.unit_id, quantity: item.availableQuantity }])
+                item.quantityString = formattedQuantity.quantityString;
+                item.unitHierarchy = unitHierarchy
+
+            }
+        })
+        setOrderItems(orderItemsCloned);
+    }
+
     const handleProductChange = (option: ISelect | null) => {
         if (option) {
             const productItem = orderItems.find(x => x.product?.product_id == option.value);
             let prevTrackItem = { ...trackItem }
             prevTrackItem.item = productItem;
-            prevTrackItem.quantity = productItem.quantity;
+            prevTrackItem.quantity = productItem.availableQuantity;
             prevTrackItem.unit = { unit_id: productItem?.unit?.unit_id }
             setTrackItem(prevTrackItem)
         } else {
@@ -545,26 +573,38 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
 
     const handleAddOrUpdateItem = () => {
         const allTrackItems = [...trackItems];
-        const productRelatedTracks = allTrackItems.filter(x => x.item?.product?.product_id == trackItem.item?.product?.product_id && x.track_id != trackItem.track_id);
-        const totalQty = productRelatedTracks.reduce((prev: any, current: any) => prev += parseFloat(current.quantity), 0)
-        if (parseFloat(trackItem.quantity) + totalQty > parseFloat(trackItem.item.quantity)) {
+        const previousTrack = allTrackItems.find(x => x.track_id == trackItem.track_id);
+        const orderItem = [...orderItems].find(x => x.product?.product_id == trackItem.item?.product?.product_id);
+        if (parseFloat(trackItem.quantity) > (parseFloat(orderItem?.availableQuantity) + parseFloat(previousTrack?.quantity || 0))) {
 
         } else {
             const currentItems = [...trackItems];
             const currentItem = { ...trackItem };
             let trackOrderItem = currentItems.find(x => x.track_id == currentItem.track_id);
+            console.log(trackOrderItem)
             if (trackOrderItem) {
                 let index = currentItems.indexOf(trackOrderItem);
                 currentItems[index] = currentItem;
                 setTrackItems(currentItems);
                 setTrackItem(initItem(currentItems.length, currentItems));
-            } {
+            } else {
                 currentItems.push(currentItem);
-                console.log(currentItems)
                 setTrackItems(currentItems);
                 setTrackItem(initItem(currentItems.length, currentItems));
             }
         }
+    }
+
+    const handleEditTrackItem = (track_id?: string) => {
+        const currentTracks = [...trackItems];
+        const track = currentTracks.find(x => x.track_id == track_id);
+        if (track) {
+            setTrackItem(track);
+        }
+    }
+
+    const handleDeleteTrack = (track_id: string) => {
+        setTrackItems((prev: any) => prev.filter((x: any) => x.track_id != track_id))
     }
 
     const handleTrackChange = (field: string, value: string) => {
@@ -604,6 +644,10 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
     }
 
     useEffect(() => {
+        refreshOrderItems();
+    }, [trackItems])
+
+    useEffect(() => {
         getOrder();
         getOrderItems();
     }, [])
@@ -631,7 +675,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                 </Grid>
                                 <Grid size={{ sm: 12, md: 6 }}>
                                     <div className='pt-[20px]'>
-                                        <QuantityCalculator unitHierarchy={trackItem.item?.unitHierarchy} parentId={trackItem.item?.order_item_id} parentQty={trackItem.item?.quantity} parentUnitId={trackItem.item?.unit?.unit_id} updateParent={handleQuantityChange} />
+                                        <QuantityCalculator unitHierarchy={trackItem.item?.unitHierarchy} parentId={trackItem.item?.order_item_id} parentQty={trackItem.quantity} parentUnitId={trackItem.item?.unit?.unit_id} updateParent={handleQuantityChange} />
                                     </div>
 
                                 </Grid>
@@ -643,7 +687,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                 </Grid>
                             </Grid>
                             <div className="flex justify-start pt-[20px] gap-4">
-                                {trackItems.map((track: any) => track.track_id).includes(trackItem.track_id) ? <Button variant="outlined" color="warning" onClick={() => setTrackItem(initItem(trackItems.length))}>Cancel</Button> : <></>}
+                                {trackItems.map((track: any) => track.track_id).includes(trackItem.track_id) ? <Button variant="outlined" color="warning" onClick={() => setTrackItem(initItem(trackItems.length, [...trackItems]))}>Cancel</Button> : <></>}
                                 <Button variant="contained" color="primary" onClick={() => handleAddOrUpdateItem()}>{trackItems.map((track: any) => track.track_id).includes(trackItem.track_id) ? 'Update' : 'Add'}</Button>
                             </div>
                             <div className="p-[20px]">
@@ -659,6 +703,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                             <TableCell>Checked Date</TableCell>
                                             <TableCell>Product</TableCell>
                                             <TableCell>Quantity</TableCell>
+                                            <TableCell></TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -669,6 +714,10 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{track.checked_date}</Typography></TableCell>
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{track.item?.product?.product_name}</Typography></TableCell>
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{track.quantityString}</Typography></TableCell>
+                                                    <TableCell>
+                                                        <IconButton color='default' onClick={() => handleEditTrackItem(track.track_id)}><Edit /></IconButton>
+                                                        <IconButton color='warning' onClick={() => handleDeleteTrack(track.track_id)}><Delete /></IconButton>
+                                                    </TableCell>
                                                 </TableRow>
                                             )
 
