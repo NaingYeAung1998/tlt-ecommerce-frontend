@@ -15,15 +15,15 @@ const PrintableReceipt = forwardRef<
             </div>
 
             <section className="store-header">
-                <h1>သလ္လာထွန်း</h1>
-                <div className="store-type">ပဲမျိုးစုံရောင်းဝယ်ရေး</div>
-                <div>၈၇လမ်း၊ ၂၇x၂၈ကြား၊ မန္တလေးမြို့။</div>
-                <div>09 2032794 | 09 793043753 | 09 779699003</div>
-                <div className="date">Date : {order.date}</div>
+                <h1 className="font-bolder">သလ္လာထွန်း</h1>
+                <div className="store-type font-bold">ပဲမျိုးစုံရောင်းဝယ်ရေး</div>
+                <div className="font-bold">၈၇လမ်း၊ ၂၇x၂၈ကြား၊ မန္တလေးမြို့။</div>
+                <div className="font-bold text-[11px]">09 2032794 | 09 793043753 | 09 779699003</div>
+                <div className="date text-right">Date : {order.date}</div>
             </section>
 
             <section className="customer">
-                <div>အမည် - {order.customer_name ?? ""}</div>
+                <div>အမည် - <b>{order.customer_name ?? ""}</b></div>
                 <div>လိပ်စာ - {order.customer_address ?? ""}</div>
             </section>
 
@@ -39,7 +39,7 @@ const PrintableReceipt = forwardRef<
                         </div>
 
                         <div className="item-detail">
-                            <span>{item.unit_quantity}</span>
+                            <span>{item.unit_quantity} x {Number(item.product?.selling_price ?? 0).toLocaleString("en-US")}</span>
                             <span>
                                 {Number(item.selling_price ?? 0).toLocaleString("en-US")}
                             </span>
@@ -58,8 +58,17 @@ const PrintableReceipt = forwardRef<
             </section>
 
             <footer>
-                <div>*ဝယ်ယူအားပေးမှုကို</div>
-                <div>ကျေးဇူးအထူးတင်ရှိပါသည်*</div>
+                <div className="font-bold">*ဝယ်ပြီးပစ္စည်းပြန်မလဲပါ*</div>
+                <div className="font-bold pt-[5px]">*ဝယ်ယူအားပေးမှုကိုကျေးဇူးတင်ပါသည်*</div>
+                <div className="text-[12px] pt-[10px]">Print Date: {new Intl.DateTimeFormat('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    second: 'numeric',
+                    hour12: true
+                }).format(new Date()).replace(',', '')}</div>
             </footer>
         </div>
     </div>

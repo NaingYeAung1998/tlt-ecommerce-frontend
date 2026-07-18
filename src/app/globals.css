@@ -70,12 +70,12 @@ body {
 }
 
 .customer {
-  margin-top: 5mm;
+  margin-top: 3mm;
   font-size: 15px;
 }
 
 .invoice-title {
-  margin: 6mm 0 3mm;
+  margin: 3mm 0 3mm;
   text-align: center;
   font-family: Arial, sans-serif;
   font-size: 18px;
@@ -121,7 +121,7 @@ body {
 }
 
 .thermal-receipt footer {
-  margin-top: 8mm;
+  margin-top: 5mm;
   text-align: center;
   font-size: 14px;
 }
