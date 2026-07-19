@@ -20,6 +20,7 @@ import { Divider } from "@/app/components/divider";
 import { inspectUsbPrinter, printReceipt } from "@/app/print.util";
 import PrintableReceipt from "@/app/components/printableReceipt";
 import { useReactToPrint } from 'react-to-print';
+import html2canvas from "html2canvas";
 
 function AddOrder() {
 
@@ -159,6 +160,62 @@ function AddOrder() {
         }
 
     }
+
+    const createReceiptCanvas = async (): Promise<HTMLCanvasElement> => {
+        const element = receiptRef.current;
+
+        if (!element) {
+            throw new Error("Receipt component is not ready.");
+        }
+
+        await document.fonts.ready;
+
+        return html2canvas(element, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            logging: false,
+        });
+    };
+
+    const handleSavePdf = async () => {
+        try {
+            const { jsPDF } = await import("jspdf");
+
+            const canvas = await createReceiptCanvas();
+
+            const imageData = canvas.toDataURL("image/png", 1.0);
+
+            const pdfWidthMm = 80;
+
+            const pdfHeightMm =
+                (canvas.height * pdfWidthMm) / canvas.width;
+
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: [pdfWidthMm, pdfHeightMm],
+                compress: true,
+            });
+
+            pdf.addImage(
+                imageData,
+                "PNG",
+                0,
+                0,
+                pdfWidthMm,
+                pdfHeightMm,
+                undefined,
+                "FAST"
+            );
+
+            pdf.save(
+                `receipt-${order.voucher_code ?? Date.now()}.pdf`
+            );
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const printTest = async () => {
         const url = process.env.NEXT_PUBLIC_BACKEND_URL + "order/print"
@@ -801,7 +858,7 @@ function AddOrder() {
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
                 <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
-                <Button onClick={() => handleSystemPrint()}>{'Print'}</Button>
+                <Button onClick={() => { handleSavePdf(); handleSystemPrint() }}>{'Print'}</Button>
                 <Button onClick={() => handlePrintTest()}>{'Print Test'}</Button>
             </div>
 
