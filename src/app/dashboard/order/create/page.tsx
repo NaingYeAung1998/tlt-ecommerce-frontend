@@ -22,6 +22,10 @@ import PrintableReceipt from "@/app/components/printableReceipt";
 import { useReactToPrint } from 'react-to-print';
 import html2canvas from "html2canvas";
 
+interface ICustomerSelect extends ISelect {
+    address?: string;
+}
+
 function AddOrder() {
 
     const receiptRef = useRef<HTMLDivElement>(null);
@@ -45,10 +49,10 @@ function AddOrder() {
     }
     const [item, setItem] = useState<IOrderItemDisplay>(initItem(0) as IOrderItemDisplay)
     const [payment, setPayment] = useState<IOrderPayment>(initPayment(0))
-    const [customerList, setCustomerList] = useState<ISelect[]>([])
+    const [customerList, setCustomerList] = useState<ICustomerSelect[]>([])
     const [products, setProducts] = useState<IProductList[]>([])
     const [fullyPaid, setFullyPaid] = useState(!id);
-    const [customer, setCustomer] = useState<ISelect | null>(null)
+    const [customer, setCustomer] = useState<ICustomerSelect | null>(null)
     const [orderDate, setOrderDate] = useState(today.toISOString().split('T')[0])
     const [payments, setPayments] = useState<any>([])
     const [paymentTotalAmount, setPaymentTotalAmount] = useState("0 MMK")
@@ -73,9 +77,13 @@ function AddOrder() {
         let response = await fetch(url);
         if (response.ok) {
             let result = await response.json();
-            let options: ISelect[] = [];
+            let options: ICustomerSelect[] = [];
             result.forEach((customer: ICustomer, index: number) => {
-                let option: ISelect = { value: customer.customer_id, label: `${customer.customer_name} (${customer.customer_address})` }
+                let option: ICustomerSelect = {
+                    value: customer.customer_id,
+                    label: `${customer.customer_name} (${customer.customer_address})`,
+                    address: customer.customer_address
+                }
                 options.push(option);
             })
             setCustomerList(options);
@@ -96,6 +104,14 @@ function AddOrder() {
         let currentOrder = { ...order };
         currentOrder.address = address;
         setOrder(currentOrder);
+    }
+
+    const handleCustomerChange = (option: ICustomerSelect | null) => {
+        setCustomer(option);
+
+        if (option && !option.__isNew__) {
+            handleAddressChange(option.address ?? '');
+        }
     }
 
     const handleOtherChargesChange = (charges: string) => {
@@ -602,7 +618,7 @@ function AddOrder() {
             order_items: orderItems,
             date: order.order_date,
             total: totalPrice,
-            otherCharges: order.other_charges ?? '0',
+            other_charges: order.other_charges ?? '0',
             paid_amount: paymentTotal,
             change_amount: totalPrice - paymentTotal
         }
@@ -648,7 +664,7 @@ function AddOrder() {
                                 }}
                                     isMulti={false}
                                     value={customer}
-                                    onChange={(option) => { setCustomer(option) }}
+                                    onChange={(option) => { handleCustomerChange(option) }}
                                     onKeyDown={(e) => { handleNextFocus(e, addressRef) }}
                                     ref={customerRef}
                                 />
@@ -796,7 +812,7 @@ function AddOrder() {
                                             <TableRow>
                                                 <TableCell colSpan={2}></TableCell>
                                                 <TableCell><Typography variant="body2" fontWeight={'bold'}>Total Amount</Typography></TableCell>
-                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(totalPrice - parseFloat(order.other_charges ?? 0))}</Typography></TableCell>
+                                                <TableCell><Typography variant="body2" fontWeight={'bold'}>{formatCurrency(totalPrice)}</Typography></TableCell>
                                                 <TableCell></TableCell>
                                             </TableRow>
                                             {
@@ -857,9 +873,8 @@ function AddOrder() {
 
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
-                <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => handleSave()}>{id ? 'Update' : 'Create'}</Button>
-                <Button onClick={() => { handleSavePdf(); handleSystemPrint() }}>{'Print'}</Button>
-                <Button onClick={() => handlePrintTest()}>{'Print Test'}</Button>
+                <Button variant="outlined" color="primary" onClick={() => { handleSavePdf(); handleSystemPrint(); }}>{'Print'}</Button>
+                <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => { handleSavePdf(); handleSystemPrint(); handleSave(); }}>{id ? 'Update' : 'Create'}</Button>
             </div>
 
         </Box>

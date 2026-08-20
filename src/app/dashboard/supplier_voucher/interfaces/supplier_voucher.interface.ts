@@ -6,6 +6,7 @@ export interface ISupplierVoucherList {
     supplier: string;
     total_amount: string;
     total_paid: string;
+    total_unpaid: string;
     created_on: string;
 }
 

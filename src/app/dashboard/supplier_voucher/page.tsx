@@ -20,7 +20,7 @@ import { ISupplierVoucherList } from './interfaces/supplier_voucher.interface';
 import { formatCurrency } from '@/app/utils';
 
 interface Column {
-    id: 'voucher_code' | 'supplier' | 'total_amount' | 'total_paid' | 'created_on';
+    id: 'voucher_code' | 'supplier' | 'total_amount' | 'total_paid' | 'total_unpaid' | 'created_on';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -41,6 +41,12 @@ const columns: readonly Column[] = [
         minWidth: 170,
         align: 'left',
 
+    },
+    {
+        id: 'total_unpaid',
+        label: 'Total Unpaid',
+        minWidth: 170,
+        align: 'left',
     },
     {
         id: 'created_on',
@@ -109,8 +115,11 @@ export default function SupplierVouchers() {
         if (response.ok) {
             let result = await response.json();
             result.data.map((voucher: ISupplierVoucherList) => {
-                voucher.total_amount = formatCurrency(parseFloat(voucher.total_amount))
-                voucher.total_paid = formatCurrency(parseFloat(voucher.total_paid))
+                const totalAmount = parseFloat(voucher.total_amount || '0');
+                const totalPaid = parseFloat(voucher.total_paid || '0');
+                voucher.total_amount = formatCurrency(totalAmount)
+                voucher.total_paid = formatCurrency(totalPaid)
+                voucher.total_unpaid = formatCurrency(totalAmount - totalPaid)
             })
             setRows(result.data);
             setTotalLength(result.totalLength)

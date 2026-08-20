@@ -262,6 +262,16 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
     const [payments, setPayments] = useState<any[]>([]);
     const [totalAmount, setTotalAmount] = useState(0);
     const amountRef = useRef<HTMLInputElement>(null);
+    const paymentChannelRef = useRef<HTMLInputElement>(null);
+    const paymentNoteRef = useRef<HTMLInputElement>(null);
+    const addPaymentRef = useRef<HTMLButtonElement>(null);
+
+    const handlePaymentEnter = (event: KeyboardEvent, nextRef: React.RefObject<HTMLElement | null>) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            nextRef.current?.focus();
+        }
+    }
 
     const getOrder = async () => {
         const url = process.env.NEXT_PUBLIC_BACKEND_URL + "order"
@@ -313,6 +323,9 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
             setPayments(currentPayments);
             setPayment(initPayment(currentPayments.length));
         }
+
+        amountRef.current?.focus();
+        amountRef.current?.select();
     }
 
     const handleEditPayment = (id?: string) => {
@@ -352,7 +365,7 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
                             <Grid container columnSpacing={4} sx={{ paddingBottom: '20px' }}>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <div className="pt-[20px]">
-                                        <TextField inputRef={amountRef} variant="outlined" placeholder="Amount" value={payment.amount} sx={{ width: { xs: '100%', lg: '100%' } }} onChange={(e) => handlePaymentChange("amount", e.target.value)} />
+                                        <TextField inputRef={amountRef} variant="outlined" placeholder="Amount" value={payment.amount} sx={{ width: { xs: '100%', lg: '100%' } }} onChange={(e) => handlePaymentChange("amount", e.target.value)} onKeyDown={(e) => handlePaymentEnter(e, paymentChannelRef)} />
                                     </div>
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -362,18 +375,18 @@ const AddPaymentModal: FC<AddPaymentModalProps> = ({ order_id, close }) => {
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <div className="pt-[20px]">
-                                        <TextField variant="outlined" placeholder="Channel" value={payment.payment_channel} sx={{ width: { xs: '100%', lg: '100%' } }} onChange={(e) => handlePaymentChange("payment_channel", e.target.value)} />
+                                        <TextField inputRef={paymentChannelRef} variant="outlined" placeholder="Channel" value={payment.payment_channel} sx={{ width: { xs: '100%', lg: '100%' } }} onChange={(e) => handlePaymentChange("payment_channel", e.target.value)} onKeyDown={(e) => handlePaymentEnter(e, paymentNoteRef)} />
                                     </div>
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <div className="pt-[20px]">
-                                        <TextField variant="outlined" placeholder="Note" value={payment.note} sx={{ width: { xs: '100%', lg: '100%' } }} onChange={(e) => handlePaymentChange("note", e.target.value)} />
+                                        <TextField inputRef={paymentNoteRef} variant="outlined" placeholder="Note" value={payment.note} sx={{ width: { xs: '100%', lg: '100%' } }} onChange={(e) => handlePaymentChange("note", e.target.value)} onKeyDown={(e) => handlePaymentEnter(e, addPaymentRef)} />
                                     </div>
                                 </Grid>
                             </Grid>
                             <div className="flex justify-start pt-[20px] gap-4">
                                 {payments.map((payment: any) => payment.order_payment_id).includes(payment.order_payment_id) ? <Button variant="outlined" color="warning" onClick={() => setPayment(initPayment(payments.length))}>Cancel</Button> : <></>}
-                                <Button variant="contained" color="primary" onClick={() => handleAddOrUpdatePayment()}>{payments.map((payment: any) => payment.order_payment_id).includes(payment.order_payment_id) ? 'Update' : 'Add'}</Button>
+                                <Button ref={addPaymentRef} variant="contained" color="primary" onClick={() => handleAddOrUpdatePayment()}>{payments.map((payment: any) => payment.order_payment_id).includes(payment.order_payment_id) ? 'Update' : 'Add'}</Button>
                             </div>
                             <div className="p-[20px]">
 
@@ -575,7 +588,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
         const allTrackItems = [...trackItems];
         const previousTrack = allTrackItems.find(x => x.track_id == trackItem.track_id);
         const orderItem = [...orderItems].find(x => x.product?.product_id == trackItem.item?.product?.product_id);
-        if (parseFloat(trackItem.quantity) > (parseFloat(orderItem?.availableQuantity) + parseFloat(previousTrack?.quantity || 0))) {
+        if (parseFloat(trackItem.quantity) > (parseFloat(orderItem?.availableQuantity) + parseFloat(previousTrack?.quantity || 0)) || parseFloat(trackItem.quantity) <= 0) {
 
         } else {
             const currentItems = [...trackItems];
@@ -654,10 +667,10 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
 
     return (
         <>
-            <div className="pt-[20px] flex items-center justify-center mt-[20vh]">
-                <Box sx={{ padding: 5, flexDirection: 'column', backgroundColor: 'white', borderRadius: '10px', width: { md: '70%' } }}>
-                    <div className='flex gap-10'>
-                        <div className='w-[50%]'>
+            <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                <Box sx={{ p: { xs: 2, md: 4 }, backgroundColor: 'white', borderRadius: 3, boxShadow: 24, width: { xs: '100%', md: '90%', lg: '75%' }, maxHeight: '90vh', overflowY: 'auto' }}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+                        <Box sx={{ width: { xs: '100%', md: '50%' }, minWidth: 0 }}>
                             <Typography variant="body1" fontWeight={'bold'}>Add Track</Typography>
                             <Grid container columnSpacing={4} sx={{ paddingBottom: '20px' }}>
                                 <Grid size={{ sm: 12, md: 6 }}>
@@ -694,6 +707,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
 
                             </div>
                             <Typography variant="body1" fontWeight={'bold'}>Untracked Items</Typography>
+                            <TableContainer sx={{ maxHeight: 300 }}>
                             <Table>
                                 <TableHead>
                                     <TableRow>
@@ -705,22 +719,23 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                 <TableBody>
                                     {
                                         orderItems.sort((a, b) => b.availableQuantity - a.availableQuantity).map((item: any, index: number) =>
-                                            <TableRow>
+                                            <TableRow key={item.order_item_id ?? index}>
                                                 <TableCell><Typography variant="body2" fontWeight={'bold'}>{item.product?.product_name}</Typography></TableCell>
                                                 <TableCell><Typography variant="body2" fontWeight={'bold'}>{item.quantityString}</Typography></TableCell>
                                             </TableRow>
                                         )
-
                                     }
                                 </TableBody>
                             </Table>
+                            </TableContainer>
                             <div className="p-[20px]">
 
                             </div>
-                        </div>
-                        <div className='w-[50%]'>
+                        </Box>
+                        <Box sx={{ width: { xs: '100%', md: '50%' }, minWidth: 0 }}>
                             <>
                                 <Typography variant="body1" fontWeight={'bold'}>Track Items</Typography>
+                                <TableContainer sx={{ maxHeight: 420 }}>
                                 <Table>
                                     <TableHead>
                                         <TableRow>
@@ -733,7 +748,7 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                     <TableBody>
                                         {
                                             trackItems.map((track: any, index: number) =>
-                                                <TableRow>
+                                                <TableRow key={track.track_id ?? index}>
 
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{track.checked_date}</Typography></TableCell>
                                                     <TableCell><Typography variant="body2" fontWeight={'bold'}>{track.item?.product?.product_name}</Typography></TableCell>
@@ -744,10 +759,10 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                                     </TableCell>
                                                 </TableRow>
                                             )
-
                                         }
                                     </TableBody>
                                 </Table>
+                                </TableContainer>
 
                             </>
                             <br />
@@ -755,12 +770,12 @@ const AddOrderTrackModal: FC<AddOrderTrackModalProps> = ({ order_id, close }) =>
                                 <Button variant="outlined" color="warning" onClick={() => close()}>Cancel</Button>
                                 <Button variant="contained" color="primary" onClick={() => handleSave()}>{'Save'}</Button>
                             </div>
-                        </div>
-                    </div>
+                        </Box>
+                    </Box>
 
 
                 </Box>
-            </div>
+            </Box>
         </>
     )
 }

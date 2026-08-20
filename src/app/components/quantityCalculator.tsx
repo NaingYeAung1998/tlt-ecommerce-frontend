@@ -21,6 +21,8 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
     const [editQuantityModalOpen, setEditQuantityModalOpen] = useState(false);
     const [roundupQuantityString, setRoundupQuantityString] = useState('');
     const qtyInputRef = useRef<any[]>([]);
+    const unitSelectRef = useRef<any[]>([]);
+    const addQuantityButtonRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         calculateQuantity(true);
@@ -79,6 +81,8 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
             qtyList[index].unit = option
             setQuantityList(qtyList);
         }
+
+        setTimeout(() => addQuantityButtonRef.current?.focus(), 0);
     }
 
     const handleAddQuanttiy = () => {
@@ -95,6 +99,15 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
 
     const handleDeleteQuantity = (id: string) => {
         setQuantityList((prev: any) => prev.filter((x: any) => x.id != id));
+    }
+
+    const handleQuantityKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, index: number) => {
+        if (event.key !== 'Enter') {
+            return;
+        }
+
+        event.preventDefault();
+        unitSelectRef.current[index]?.focus();
     }
 
     const handleSaveEditQuantityModal = () => {
@@ -126,14 +139,14 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
                         <br />
                         <div className="flex justify-between items-center pb-[30px]">
                             <Typography variant="body1" fontWeight={'bold'}>Quantities</Typography>
-                            <Button variant="outlined" onClick={() => handleAddQuanttiy()}>Add Quantity</Button>
+                            <Button ref={addQuantityButtonRef} variant="outlined" onClick={() => handleAddQuanttiy()}>Add Quantity</Button>
                         </div>
 
                         {
                             quantityList.map((qty: any, index: number) =>
                                 <div className="md:flex gap-4 pb-[30px]" key={index}>
                                     <div className="md:w-[40%]">
-                                        <TextField inputRef={(ref) => qtyInputRef.current[index] = ref} type="number" value={qty.quantity} label="Quantity" onChange={(e) => handleQuantityChange(e.target.value, qty.id)} />
+                                        <TextField inputRef={(ref) => qtyInputRef.current[index] = ref} type="number" value={qty.quantity} label="Quantity" onChange={(e) => handleQuantityChange(e.target.value, qty.id)} onKeyDown={(e) => handleQuantityKeyDown(e, index)} />
                                     </div>
                                     <div className="md:w-[45%]">
                                         <Select options={unitList} placeholder='Units' styles={{
@@ -141,6 +154,8 @@ const QuantityCalculator: FC<QuantiyCalculatorProps> = ({ unitHierarchy, parentI
                                             menu: (styles) => ({ ...styles, width: '100%' }),
                                             menuPortal: (styles) => ({ ...styles, zIndex: 1, width: '100%' })
                                         }}
+                                            ref={(ref) => { unitSelectRef.current[index] = ref }}
+                                            openMenuOnFocus
                                             value={qty.unit}
                                             onChange={(option) => handleQuantityUnitChange(option, qty.id)}
                                         />

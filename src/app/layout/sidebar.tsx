@@ -1,6 +1,6 @@
 "use client"
 
-import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, InsertChart as InsertChartIcon, Inventory as InventoryIcon, ListAlt as ListAltIcon, MonetizationOn as MonetizationOnIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
+import { AccountBox as AccountBoxIcon, Assignment as AssignmentIcon, BusinessCenter as BusinessCenterIcon, Category as CategoryIcon, Dashboard as DashboardIcon, Drafts as DraftsIcon, Factory as FactoryIcon, Grade as GradeIcon, Inbox as InboxIcon, InsertChart as InsertChartIcon, Inventory as InventoryIcon, ListAlt as ListAltIcon, MonetizationOn as MonetizationOnIcon, People as PeopleIcon, Receipt as ReceiptIcon, Scale as ScaleIcon, Today as TodayIcon, Warehouse as WarehouseIcon } from "@mui/icons-material";
 import { Box, Collapse, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Typography } from "@mui/material";
 import SidebarButton from "../components/sidebarButton";
 import { FC, useState } from "react";
@@ -92,6 +92,15 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
                         </List>
                         <List component="div" sx={{ pl: 4 }}>
                             <SidebarButton icon={<MonetizationOnIcon />} label="Sales Report" selected={currentRoute.includes('report/sales')} handleClick={() => handleRoute('/dashboard/report/sales')} />
+                        </List>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<TodayIcon />} label="Daily Sales" selected={currentRoute.includes('report/daily-sales')} handleClick={() => handleRoute('/dashboard/report/daily-sales')} />
+                        </List>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<ListAltIcon />} label="Product Sales" selected={currentRoute.includes('report/product-sales')} handleClick={() => handleRoute('/dashboard/report/product-sales')} />
+                        </List>
+                        <List component="div" sx={{ pl: 4 }}>
+                            <SidebarButton icon={<InventoryIcon />} label="Inventory Report" selected={currentRoute.includes('report/inventory')} handleClick={() => handleRoute('/dashboard/report/inventory')} />
                         </List>
                     </Collapse>
                 </List>

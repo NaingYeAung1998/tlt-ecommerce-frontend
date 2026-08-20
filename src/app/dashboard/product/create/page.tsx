@@ -51,6 +51,11 @@ function AddProduct() {
 
     const handleSave = async () => {
         const data = { ...product };
+        if (parseFloat(data.wholesale_starting_quantity || '0') > 0 && !wholesaleUnit) {
+            setErrorMessage("Please select a wholesale starting unit.");
+            setShowError(true);
+            return;
+        }
         data.category = category ? { category_id: category.value } : undefined;
         data.grade = grade ? { grade_id: grade.value } : undefined;
         data.per_bag_unit = perBagUnit ? { unit_id: perBagUnit.value } : undefined;
@@ -133,6 +138,12 @@ function AddProduct() {
             }
             if (result.grade) {
                 setGrade({ value: result.grade.grade_id, label: result.grade.grade_name });
+            }
+            if (result.wholesale_starting_unit) {
+                setWholesaleUnit({
+                    value: result.wholesale_starting_unit.unit_id,
+                    label: result.wholesale_starting_unit.unit_name
+                });
             }
             if (result.per_bag_unit) {
                 const perBagUnitHierarchy = await handlePerBagUnitChange({ value: result.per_bag_unit.unit_id, label: result.per_bag_unit.unit_name }, result.quantity_per_bag)

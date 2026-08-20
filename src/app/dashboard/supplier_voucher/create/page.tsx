@@ -2,7 +2,7 @@
 
 import { Alert, Box, Button, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ISupplierVoucher } from "../interfaces/supplier_voucher.interface";
 import Select from 'react-select'
@@ -28,6 +28,17 @@ function AddSupplierVoucher() {
     const [payments, setPayments] = useState<any>([])
     const [paymentTotalAmount, setPaymentTotalAmount] = useState("0 MMK")
     const [showError, setShowError] = useState(false);
+
+    const totalUnpaidAmount = useMemo(() => {
+        const totalAmount = selectedStocks.reduce((total: number, stock: any) => {
+            return total + Number(stock.buying_price_lowest_unit || 0) * Number(stock.quantity || 0);
+        }, 0);
+        const totalPaid = payments.reduce((total: number, payment: any) => {
+            return total + Number(payment.amount || 0);
+        }, 0);
+
+        return formatCurrency(totalAmount - totalPaid);
+    }, [selectedStocks, payments]);
 
     const getSupplierList = async () => {
         const url = process.env.NEXT_PUBLIC_BACKEND_URL + "supplier?perPage=-1"
@@ -253,7 +264,7 @@ function AddSupplierVoucher() {
 
             <div className="pt-[40px]">
                 <div className="flex">
-                    <div><label className="text-[16px] font-bold">Stocks (Total - {stockTotalAmount})</label></div>
+                    <div><label className="text-[16px] font-bold">Stocks (Total - <label className="font-normal">{stockTotalAmount}</label>)</label></div>
                 </div>
                 <div className="p-[20px]">
                     {/* <TableContainer> */}
@@ -295,8 +306,8 @@ function AddSupplierVoucher() {
             </div>
 
             <div className="pt-[40px]">
-                <div className="flex">
-                    <div><label className="text-[16px] font-bold">Payments (Total - {paymentTotalAmount})</label></div>
+                <div className="flex flex-wrap justify-between gap-3">
+                    <div><label className="text-[16px] font-bold">Payments (Total Paid - <label className="font-normal">{paymentTotalAmount}</label>) (Total Unpaid - <label className="font-normal">{totalUnpaidAmount}</label>)</label></div>
                 </div>
                 <div className="p-[20px]">
                     {/* <TableContainer> */}
