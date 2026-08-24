@@ -24,7 +24,7 @@ const Sidebar: FC<SiderbarProps> = ({ handleSidebarClose }) => {
         handleSidebarClose();
     }
     return (
-        <Box sx={{ width: '100%', maxWidth: 360, padding: 1, backgroundColor: 'white', height: '100%' }}>
+        <Box sx={{ width: '100%', maxWidth: 360, padding: 1, backgroundColor: 'white', height: '100%', maxHeight: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
             <nav aria-label="main mailbox folders">
                 <List
                     subheader={
