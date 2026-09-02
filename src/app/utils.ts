@@ -9,15 +9,12 @@ export const formatCurrency = (amount: number) => {
 }
 
 export const roundUpPrice = (amount: string) => {
-    if (isDecimal(amount)) {
-        let amountSegs = amount.split(".");
-        amount = amountSegs[0];
+    const numericAmount = parseFloat(amount);
+    if (!Number.isFinite(numericAmount)) {
+        return 0;
     }
-    if (amount.endsWith("00") || amount.length < 4) {
-        return parseFloat(amount)
-    }
-    amount.slice(-2);
-    return ((parseInt(amount) + 1) * 100);
+
+    return Math.ceil(numericAmount / 100) * 100;
 }
 
 export const isDecimal = (input: string) => {

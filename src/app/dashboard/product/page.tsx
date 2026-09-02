@@ -9,18 +9,16 @@ import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import { Alert, Box, Button, Grid, IconButton, Input, InputAdornment, Typography } from '@mui/material';
-import { Delete, Edit, Inventory, ListAlt, Search as SearchIcon } from '@mui/icons-material';
+import { Delete, Edit, ListAlt, Search as SearchIcon } from '@mui/icons-material';
 import { useSearchParams } from 'next/navigation';
 import { KeyboardEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import moment from 'moment';
-import { MOMENT_FORMAT } from '@/app/constants';
 import { IProductList } from './interfaces/product.interface';
 import DeleteConfirmDialog from '@/app/components/deleteConfirmDialog';
-import { bindPerBagUnitHierarchy, calculateQuantityWithHierarchy, getAllUnitHierarchies } from '@/app/utils';
+import { bindPerBagUnitHierarchy, calculateQuantityWithHierarchy, formatCurrency, getAllUnitHierarchies } from '@/app/utils';
 
 interface Column {
-    id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'product_quantity_per_bag' | 'missing_quantity' | 'product_description' | 'created_on';
+    id: 'product_name' | 'product_code' | 'product_category' | 'product_grade' | 'product_quantity_per_bag' | 'missing_quantity' | 'selling_price' | 'wholesale_selling_price';
     label: string;
     minWidth?: number;
     align?: 'right' | 'left';
@@ -57,15 +55,15 @@ const columns: readonly Column[] = [
 
     },
     {
-        id: 'product_description',
-        label: 'Description',
+        id: 'selling_price',
+        label: 'Retail Price',
         minWidth: 170,
         align: 'left',
 
     },
     {
-        id: 'created_on',
-        label: 'Created Date',
+        id: 'wholesale_selling_price',
+        label: 'Wholesale Price',
         minWidth: 170,
         align: 'left',
     },
@@ -138,6 +136,8 @@ export default function Products() {
                         let formattedQuantity = calculateQuantityWithHierarchy(perBagUnitHierarchy, [{ unit_id: product.lowest_unit_id, quantity: product.missing_quantity }])
                         product.missing_quantity = formattedQuantity.quantityString
                     }
+                    product.selling_price = formatCurrency(parseFloat(product.selling_price || '0'));
+                    product.wholesale_selling_price = formatCurrency(parseFloat(product.wholesale_selling_price || '0'));
                 })
             }
 
@@ -219,7 +219,7 @@ export default function Products() {
                                                 const value = row[column.id];
                                                 return (
                                                     <TableCell key={column.id} align={column.align}>
-                                                        {column.id == 'created_on' ? moment(value).format(MOMENT_FORMAT) : value}
+                                                        {value}
                                                     </TableCell>
                                                 );
                                             })}

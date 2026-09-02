@@ -59,8 +59,8 @@ const PrintableReceipt = forwardRef<
 
             <footer>
                 <div className="font-bold">*ဝယ်ပြီးပစ္စည်းပြန်မလဲပါ*</div>
-                <div className="font-bold pt-[5px]">*ဝယ်ယူအားပေးမှုကိုကျေးဇူးတင်ပါသည်*</div>
-                <div className="text-[12px] pt-[10px]">Print Date: {new Intl.DateTimeFormat('en-GB', {
+                <div className="font-bold pt-[2px]">*ဝယ်ယူအားပေးမှုကိုကျေးဇူးတင်ပါသည်*</div>
+                <div className="text-[11px] pt-[3px]">Print Date: {new Intl.DateTimeFormat('en-GB', {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric',

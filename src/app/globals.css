@@ -28,7 +28,7 @@ body {
 .thermal-receipt {
   width: 72mm;
   box-sizing: border-box;
-  padding: 2mm 3mm 5mm;
+  padding: 1mm 2mm 2mm;
   background: white;
   color: black;
   font-family:
@@ -36,8 +36,8 @@ body {
     "Myanmar Text",
     "Noto Sans Myanmar",
     sans-serif;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.25;
 }
 
 .voucher-code {
@@ -48,58 +48,60 @@ body {
 }
 
 .store-header {
-  margin-top: 4mm;
+  margin-top: 1mm;
   text-align: center;
 }
 
 .store-header h1 {
   margin: 0;
-  font-size: 28px;
-  line-height: 1.3;
+  font-size: 24px;
+  line-height: 1.15;
   font-weight: 700;
 }
 
 .store-type {
-  margin-top: 1mm;
-  font-size: 18px;
+  margin-top: 0;
+  font-size: 16px;
 }
 
 .date {
-  margin-top: 2mm;
+  margin-top: 1mm;
   font-family: Arial, sans-serif;
 }
 
 .customer {
-  margin-top: 3mm;
-  font-size: 15px;
+  margin-top: 1.5mm;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 .invoice-title {
-  margin: 3mm 0 3mm;
+  margin: 1.5mm 0;
   text-align: center;
   font-family: Arial, sans-serif;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .separator {
   border-top: 1px dashed black;
-  margin: 2mm 0 3mm;
+  margin: 1mm 0;
 }
 
 .item {
-  margin-bottom: 4mm;
+  margin-bottom: 1.5mm;
 }
 
 .product-name {
-  font-size: 15px;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .item-detail {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 3mm;
-  margin-top: 1mm;
-  padding-left: 18mm;
+  gap: 2mm;
+  margin-top: 0;
+  padding-left: 10mm;
   font-family:
     "Pyidaungsu",
     "Myanmar Text",
@@ -111,8 +113,8 @@ body {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  min-height: 7mm;
-  font-size: 15px;
+  min-height: 5mm;
+  font-size: 13px;
 }
 
 .total-row span:last-child {
@@ -121,7 +123,18 @@ body {
 }
 
 .thermal-receipt footer {
-  margin-top: 5mm;
+  margin-top: 2mm;
   text-align: center;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  .thermal-receipt {
+    margin: 0;
+  }
 }

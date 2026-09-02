@@ -873,8 +873,8 @@ function AddOrder() {
 
             <div className="flex justify-end pt-[20px] gap-4">
                 <Link href={'/dashboard/order'}><Button variant="outlined" color="warning">Cancel</Button></Link>
-                <Button variant="outlined" color="primary" onClick={() => { handleSavePdf(); handleSystemPrint(); }}>{'Print'}</Button>
-                <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => { handleSavePdf(); handleSystemPrint(); handleSave(); }}>{id ? 'Update' : 'Create'}</Button>
+                <Button variant="outlined" color="primary" onClick={() => { handleSavePdf(); handleSystemPrint(); handleSave(); }}>{'Print'}</Button>
+                <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => { handleSave(); }}>{id ? 'Update' : 'Create'}</Button>
             </div>
 
         </Box>
