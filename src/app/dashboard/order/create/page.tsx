@@ -1,6 +1,6 @@
 "use client"
 
-import { Alert, Box, Button, Grid, IconButton, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, IconButton, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Ref, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -57,8 +57,13 @@ function AddOrder() {
     const [payments, setPayments] = useState<any>([])
     const [paymentTotalAmount, setPaymentTotalAmount] = useState("0 MMK")
     const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [itemValidationError, setItemValidationError] = useState("");
     const [loading, setLoading] = useState(false);
     const [printStatus, setPrintStatus] = useState("");
+    const [stockWarningOpen, setStockWarningOpen] = useState(false);
+    const [availableStockLabel, setAvailableStockLabel] = useState("");
+    const [checkingStock, setCheckingStock] = useState(false);
 
     //input refs
     const customerRef = useRef<any>(null);
@@ -120,7 +125,34 @@ function AddOrder() {
         setOrder(currentOrder);
     }
 
+    const getItemValidationError = (orderItem: IOrderItem) => {
+        if (!orderItem.product?.product_id) return "Please select a product.";
+        if (!orderItem.unit?.unit_id) return "Please select a quantity unit.";
+        if (!Number.isFinite(Number(orderItem.quantity)) || Number(orderItem.quantity) <= 0 || Number(orderItem.quantity) > Number.MAX_SAFE_INTEGER) return "Quantity must be a valid number greater than zero.";
+        if (!Number.isFinite(Number(orderItem.selling_price)) || Number(orderItem.selling_price) < 0 || Number(orderItem.selling_price) > Number.MAX_SAFE_INTEGER) return "Selling price must be a valid amount that is zero or greater.";
+        return "";
+    }
+
     const handleSave = async () => {
+        const otherCharges = Number(order.other_charges || 0);
+        if (!Number.isFinite(otherCharges) || otherCharges < 0 || otherCharges > Number.MAX_SAFE_INTEGER) {
+            setErrorMessage("Other Charges must be a valid amount that is zero or greater.");
+            setShowError(true);
+            return;
+        }
+        if (orderItems.length === 0) {
+            setErrorMessage("Please add at least one valid product before creating the order.");
+            setShowError(true);
+            return;
+        }
+        const invalidItemMessage = orderItems.map(getItemValidationError).find(Boolean);
+        if (invalidItemMessage) {
+            setErrorMessage(invalidItemMessage);
+            setShowError(true);
+            return;
+        }
+
+        setShowError(false);
         setLoading(true);
         const data = { ...order };
         data.items = orderItems.map((item, index) => { return { product: item.product, quantity: item.quantity, missing_quantity: 0, stock: item.stock, selling_price: item.selling_price, unit: item.unit, productStocks: [], unitHierarchy: [], sortOrder: index } })
@@ -155,6 +187,8 @@ function AddOrder() {
             if (response.ok) {
                 router.push("/dashboard/order?showSuccess=true&action=update&customer=" + customer?.label);
             } else {
+                const error = await response.json().catch(() => null);
+                setErrorMessage(error?.message || "Failed to update Voucher.");
                 setShowError(true)
                 setLoading(false)
             }
@@ -170,6 +204,8 @@ function AddOrder() {
             if (response.ok) {
                 router.push("/dashboard/order?showSuccess=true&action=create&customer=" + customer?.label);
             } else {
+                const error = await response.json().catch(() => null);
+                setErrorMessage(error?.message || "Failed to create Voucher.");
                 setShowError(true)
                 setLoading(false)
             }
@@ -489,7 +525,7 @@ function AddOrder() {
     // };
 
 
-    const handleAddOrUpdateItem = () => {
+    const addOrUpdateItem = () => {
         const currentOrderItems = [...orderItems]
         const currentItem = { ...item }
         let orderItem = currentOrderItems.find(x => x.item_id == currentItem.item_id);
@@ -506,6 +542,64 @@ function AddOrder() {
         }
         if (itemRef && itemRef.current) {
             itemRef.current.focus()
+        }
+        setItemValidationError("");
+    }
+
+    const handleAddOrUpdateItem = async () => {
+        const validationError = getItemValidationError(item);
+        if (validationError) {
+            setItemValidationError(validationError);
+            return;
+        }
+        setItemValidationError("");
+
+        const isUpdatingItem = orderItems.some((orderItem) => orderItem.item_id === item.item_id);
+        if (isUpdatingItem) {
+            addOrUpdateItem();
+            return;
+        }
+
+        const productId = item.product?.product_id;
+        if (!productId) {
+            addOrUpdateItem();
+            return;
+        }
+
+        setCheckingStock(true);
+        try {
+            const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/getByProduct?product_id=${productId}&currentPage=0&perPage=-1`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                addOrUpdateItem();
+                return;
+            }
+
+            const stocks: IStockList[] = await response.json();
+            const availableQuantity = stocks.reduce((total, stock) => (
+                total
+                + Number(stock.total_stored || 0)
+                + Number(stock.total_received || 0)
+                - Number(stock.total_sold || 0)
+                - Number(stock.total_transferred || 0)
+            ), 0);
+            const nonNegativeAvailableQuantity = Math.max(availableQuantity, 0);
+
+            if (item.quantity > nonNegativeAvailableQuantity) {
+                const formattedQuantity = calculateRoundUpUnit(item.unitHierarchy, nonNegativeAvailableQuantity)
+                    .map((quantity) => `${quantity.quantity} ${quantity.unit_name}`)
+                    .join(' ');
+                const lowestUnit = item.unitHierarchy[item.unitHierarchy.length - 1];
+                setAvailableStockLabel(formattedQuantity || `0 ${lowestUnit?.unit_name ?? ''}`.trim());
+                setStockWarningOpen(true);
+                return;
+            }
+
+            addOrUpdateItem();
+        } catch {
+            addOrUpdateItem();
+        } finally {
+            setCheckingStock(false);
         }
     }
 
@@ -647,7 +741,7 @@ function AddOrder() {
                 <PrintableReceipt order={convertToOrderDisplay()} ref={receiptRef} />
             </div>
 
-            <Alert severity="error" hidden={!showError}>{`Failed to create Voucher.`}</Alert>
+            <Alert severity="error" hidden={!showError}>{errorMessage || `Failed to create Voucher.`}</Alert>
             <br />
 
 
@@ -685,7 +779,7 @@ function AddOrder() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <div className="pt-[20px]">
-                                <TextField type="number" InputLabelProps={{ shrink: !!order.other_charges }} value={order.other_charges} variant="outlined" label="Other Charges" sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} onChange={(e) => handleOtherChargesChange(e.target.value)} />
+                                <TextField type="number" InputLabelProps={{ shrink: !!order.other_charges }} value={order.other_charges} variant="outlined" label="Other Charges" error={Number(order.other_charges || 0) < 0} helperText={Number(order.other_charges || 0) < 0 ? "Must be zero or greater" : ""} inputProps={{ min: 0 }} sx={{ width: { xs: '100%', lg: '100%' }, zIndex: 0 }} onChange={(e) => handleOtherChargesChange(e.target.value)} />
                             </div>
                         </Grid>
 
@@ -694,9 +788,10 @@ function AddOrder() {
                     <div className="pt-[20px]">
                         <Typography variant="body1" fontWeight={'bold'}>Item</Typography>
                         <OrderItem item={item} products={products} updateItem={handleUpdateItem} itemRef={itemRef} nextRef={addRef} />
+                        <Alert severity="error" hidden={!itemValidationError} sx={{ mt: 2 }}>{itemValidationError}</Alert>
                         <div className="flex justify-start pt-[20px] gap-4">
                             {orderItems.map((item) => item.item_id).includes(item.item_id) ? <Button variant="outlined" color="warning" onClick={() => setItem(initItem(orderItems.length))}>Cancel</Button> : <></>}
-                            <Button ref={addRef} variant="contained" color="primary" onClick={() => handleAddOrUpdateItem()}>{orderItems.map((item) => item.item_id).includes(item.item_id) ? 'Update' : 'Add'}</Button>
+                            <Button ref={addRef} disabled={checkingStock} variant="contained" color="primary" onClick={() => handleAddOrUpdateItem()}>{orderItems.map((item) => item.item_id).includes(item.item_id) ? 'Update' : 'Add'}</Button>
                         </div>
                     </div>
                     <div className="pt-[40px]"><label className="text-[16px] font-bold">Payments</label></div>
@@ -876,6 +971,19 @@ function AddOrder() {
                 <Button variant="outlined" color="primary" onClick={() => { handleSavePdf(); handleSystemPrint(); handleSave(); }}>{'Print'}</Button>
                 <Button disabled={loading} variant="contained" color={loading ? "secondary" : "primary"} onClick={() => { handleSave(); }}>{id ? 'Update' : 'Create'}</Button>
             </div>
+
+            <Dialog open={stockWarningOpen} onClose={() => setStockWarningOpen(false)}>
+                <DialogTitle>Insufficient Stock</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        The entered quantity is greater than the available stock ({availableStockLabel}). Do you want to continue anyway?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setStockWarningOpen(false)}>Cancel</Button>
+                    <Button variant="contained" onClick={() => { setStockWarningOpen(false); addOrUpdateItem(); }} autoFocus>Continue</Button>
+                </DialogActions>
+            </Dialog>
 
         </Box>
     )

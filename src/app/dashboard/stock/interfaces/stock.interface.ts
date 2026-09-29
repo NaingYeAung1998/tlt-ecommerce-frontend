@@ -21,6 +21,10 @@ export interface IStockList {
     wholesale_selling_price: string;
     wholesale_fix_price: string;
     wholesale_starting_quantity: string;
+    total_stored?: string;
+    total_received?: string;
+    total_sold?: string;
+    total_transferred?: string;
     note: string;
     created_on: string;
 }

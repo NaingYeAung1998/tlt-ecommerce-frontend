@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react"
+import { FC, useEffect, useMemo, useRef, useState } from "react"
 import { ISelect } from "../interfaces"
 import { IUnitList } from "../dashboard/unit/interfaces/unit.interface"
 import { IOrderItem, IOrderItemDisplay } from "../dashboard/order/interfaces/order.interface"
@@ -23,6 +23,7 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, ne
 
     const [unitHierarchy, setUnitHierarchy] = useState<IUnitList[]>([])
     const [productStocks, setProductStocks] = useState<IStockList[]>([])
+    const [stockLoading, setStockLoading] = useState(false);
     const [fixedPrice, setFixedPrice] = useState(0);
     const qtyRef = useRef<any>(null);
     const priceRef = useRef<any>(null);
@@ -46,20 +47,26 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, ne
     }
 
     const getProductStocks = async (product_id: string) => {
-        if (product_id) {
-            const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/getByProduct?product_id=${product_id}&perPage=-1`;
-            let response = await fetch(url);
-            if (response.ok) {
-                let result = await response.json();
-                if (result) {
-                    setProductStocks(result)
-                    const prevItem = { ...item }
-                    prevItem.productStocks = result;
-                    updateItem(prevItem)
-                }
-            }
+        if (!product_id) {
+            setProductStocks([]);
+            return;
         }
 
+        setStockLoading(true);
+        try {
+            const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}stock/getByProduct?product_id=${product_id}&currentPage=0&perPage=-1`;
+            const response = await fetch(url);
+            if (response.ok) {
+                const result = await response.json();
+                setProductStocks(Array.isArray(result) ? result : []);
+            } else {
+                setProductStocks([]);
+            }
+        } catch {
+            setProductStocks([]);
+        } finally {
+            setStockLoading(false);
+        }
     }
 
     const handleProductChange = async (option: any) => {
@@ -120,7 +127,7 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, ne
 
     const handlePriceChange = (value: string) => {
         let prevItem = { ...item }
-        prevItem.selling_price = parseFloat(value);
+        prevItem.selling_price = value === '' ? undefined : Number(value);
         updateItem(prevItem)
 
     }
@@ -139,8 +146,30 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, ne
 
     useEffect(() => {
         getProductUnitHierarchy(item.product ? item.product.product_id : '');
-        // getProductStocks(item.product ? item.product.product_id : '');
+        getProductStocks(item.product ? item.product.product_id : '');
     }, [item.product])
+
+    const availableStockQuantity = useMemo(() => {
+        const quantity = productStocks.reduce((total, stock) => {
+            const stored = Number(stock.total_stored || 0);
+            const received = Number(stock.total_received || 0);
+            const sold = Number(stock.total_sold || 0);
+            const transferred = Number(stock.total_transferred || 0);
+            return total + stored + received - sold - transferred;
+        }, 0);
+        return Math.max(quantity, 0);
+    }, [productStocks]);
+
+    const availableStock = useMemo(() => {
+        if (unitHierarchy.length === 0) {
+            return availableStockQuantity.toString();
+        }
+
+        const lowestUnit = unitHierarchy[unitHierarchy.length - 1];
+        return calculateRoundUpUnit(unitHierarchy, availableStockQuantity)
+            .map((value) => `${value.quantity} ${value.unit_name}`)
+            .join(' ') || `0 ${lowestUnit?.unit_name ?? ''}`.trim();
+    }, [availableStockQuantity, unitHierarchy]);
 
     const productOptions: ISelect[] = products.map((product) => { return { value: product.product_id, label: `${product.product_name} (${product.product_grade}) (${product.product_code})` } })
     const productStockOptions: ISelect[] = productStocks.map((stock) => { return { value: stock.stock_id, label: stock.stock_supplier } })
@@ -179,9 +208,14 @@ const OrderItem: FC<OrderItemProps> = ({ products, item, updateItem, itemRef, ne
             </Grid> */}
             <Grid size={{ sm: 12, md: 6 }}>
                 <QuantityCalculator qtyRef={qtyRef} nextFocus={() => handlePriceFocus()} unitHierarchy={item.unitHierarchy.length > 0 ? item.unitHierarchy : unitHierarchy} parentId={item.item_id ? item.item_id : ''} parentQty={item.quantity} parentUnitId={item.unit ? item.unit.unit_id : ''} updateParent={handleQuantityChange} />
+                {item.product && (
+                    <Typography variant="caption" color={stockLoading ? "text.secondary" : "primary"} sx={{ display: 'block', mt: 0.75, ml: 0.5 }}>
+                        Available Stock: {stockLoading ? 'Loading...' : availableStock}
+                    </Typography>
+                )}
             </Grid>
             <Grid size={{ sm: 12, md: 6 }}>
-                <TextField inputRef={priceRef} InputLabelProps={{ shrink: true }} label={"Fixed Price:" + fixedPrice} type="number" value={item.selling_price} onChange={(e) => { handlePriceChange(e.target.value) }} onKeyDown={(e) => { if (nextRef) { e.preventDefault(); handleNextFocus(e, nextRef) } }} sx={{ zIndex: 0 }} />
+                <TextField inputRef={priceRef} InputLabelProps={{ shrink: true }} label={"Fixed Price:" + fixedPrice} type="number" value={item.selling_price ?? ''} inputProps={{ min: 0 }} onChange={(e) => { handlePriceChange(e.target.value) }} onKeyDown={(e) => { if (e.key === 'Enter' && nextRef) { e.preventDefault(); handleNextFocus(e, nextRef) } }} sx={{ zIndex: 0 }} />
             </Grid>
         </Grid>
     )
